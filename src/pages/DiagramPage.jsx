@@ -146,42 +146,71 @@ function DiagramPage() {
   const handleCanvasClick = (e) => {
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = (e.clientX - rect.left) / zoom
+    const y = (e.clientY - rect.top) / zoom
 
     // Find clicked node
     const clickedNode = nodes.find(node => {
       const dx = node.x - x
       const dy = node.y - y
-      return Math.sqrt(dx * dx + dy * dy) < 25
+      return Math.sqrt(dx * dx + dy * dy) < 30
     })
 
     setSelectedNode(clickedNode || null)
   }
 
+  // Calculate distance from point to quadratic bezier curve (approximate)
+  const distanceToQuadraticCurve = (px, py, x0, y0, xc, yc, x1, y1) => {
+    // Sample points along the curve and find minimum distance
+    let minDist = Infinity
+    const steps = 20
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps
+      // Quadratic bezier formula: B(t) = (1-t)^2 * P0 + 2(1-t)t * Pc + t^2 * P1
+      const bx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * xc + t * t * x1
+      const by = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * yc + t * t * y1
+      const dist = Math.sqrt((px - bx) ** 2 + (py - by) ** 2)
+      minDist = Math.min(minDist, dist)
+    }
+    return minDist
+  }
+
   const handleCanvasMouseMove = (e) => {
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    const x = (e.clientX - rect.left) / zoom
+    const y = (e.clientY - rect.top) / zoom
 
     // Find hovered connection
     let found = null
+    let minDist = Infinity
     relationships.forEach((rel) => {
       const fromNode = nodes.find(n => n.id === rel.from)
       const toNode = nodes.find(n => n.id === rel.to)
       if (!fromNode || !toNode) return
 
-      // Simple distance check (could be improved with actual line distance)
+      // Calculate control point for quadratic curve
       const midX = (fromNode.x + toNode.x) / 2
-      const midY = (fromNode.y + toNode.y) / 2
-      const dist = Math.sqrt((midX - x) ** 2 + (midY - y) ** 2)
-      if (dist < 30) {
+      const midY = (fromNode.y + toNode.y) / 2 - 20
+
+      // Check distance to the curved line
+      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
+      if (dist < 15 && dist < minDist) {
+        minDist = dist
         found = rel
       }
     })
 
     setHoveredConnection(found)
+
+    // Change cursor if hovering over a connection or node
+    const hoveredNode = nodes.find(node => {
+      const dx = node.x - x
+      const dy = node.y - y
+      return Math.sqrt(dx * dx + dy * dy) < 30
+    })
+
+    canvas.style.cursor = (found || hoveredNode) ? 'pointer' : 'default'
   }
 
   return (

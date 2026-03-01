@@ -8,7 +8,7 @@ export const characters = [
     alias: 'พ่อใหญ่',
     role: 'ผู้บงการหลัก',
     status: 'suspect',
-    image: '/assets/characters/somchai.svg',
+    image: '/assets/characters/somchai.jpg',
     notes: 'อดีตนักการเมืองท้องถิ่น มีเครือข่ายกว้างขวางในจังหวัดชายแดน',
     connections: ['char-002', 'char-003', 'char-004'],
     riskLevel: 'high',
@@ -21,7 +21,7 @@ export const characters = [
     alias: 'นายหญิง',
     role: 'ธุรการเงิน',
     status: 'suspect',
-    image: '/assets/characters/wilai.svg',
+    image: '/assets/characters/wilai.jpg',
     notes: 'อดีตผู้จัดการธนาคาร เชี่ยวชาญการโอนเงินข้ามพรมแดน',
     connections: ['char-001', 'char-005'],
     riskLevel: 'high',
@@ -34,7 +34,7 @@ export const characters = [
     alias: 'เด็ก',
     role: 'คนขับขนเงิน',
     status: 'suspect',
-    image: '/assets/characters/thanakorn.svg',
+    image: '/assets/characters/thanakorn.jpg',
     notes: 'วัย 28 ปี มีประวัติเป็นพนักงานขับรถ ถูกจับกุมคดียาเสพติดปี 2562',
     connections: ['char-001', 'char-005'],
     riskLevel: 'medium',
@@ -47,7 +47,7 @@ export const characters = [
     alias: null,
     role: 'ทนายความ',
     status: 'person-of-interest',
-    image: '/assets/characters/arun.svg',
+    image: '/assets/characters/arun.jpg',
     notes: 'ทนายความที่ปรึกษากิจการ มีสำนักงานใกล้สถานี้รถไฟ',
     connections: ['char-001'],
     riskLevel: 'medium',
@@ -60,7 +60,7 @@ export const characters = [
     alias: 'หมอ',
     role: 'ช่องทางฟอกเงิน',
     status: 'suspect',
-    image: '/assets/characters/kitti.svg',
+    image: '/assets/characters/kitti.jpg',
     notes: 'เจ้าของคลินิกเวชกรรม 3 แห่ง มีรายได้ผิดปกติจากการรักษา',
     connections: ['char-002', 'char-003'],
     riskLevel: 'high',
@@ -78,7 +78,7 @@ export const files = [
     duration: '03:24',
     dateCreated: '2024-03-15',
     dateAdded: '2024-03-16',
-    thumbnail: '/assets/thumbnails/meeting.svg',
+    thumbnail: '/assets/thumbnails/meeting.jpg',
     description: 'บันทึกการประชุมลับที่ภัตตาคมแห่งหนึ่ง มีผู้เข้าร่วม 3 คน',
     tags: ['ประชุม', 'ลับ', 'สมชาย'],
     relatedCharacters: ['char-001', 'char-002', 'char-004'],
@@ -93,7 +93,7 @@ export const files = [
     duration: '00:45',
     dateCreated: '2024-03-10',
     dateAdded: '2024-03-11',
-    thumbnail: '/assets/thumbnails/cctv.svg',
+    thumbnail: '/assets/thumbnails/cctv.jpg',
     description: 'กล้องวงจรปิดธนาคาร บันทึกการฝากเงิน',
     tags: ['CCTV', 'ธนาคาร', 'โอนเงิน'],
     relatedCharacters: ['char-003'],
@@ -108,7 +108,7 @@ export const files = [
     duration: '15:30',
     dateCreated: '2024-03-18',
     dateAdded: '2024-03-18',
-    thumbnail: '/assets/thumbnails/interview.svg',
+    thumbnail: '/assets/thumbnails/interview.jpg',
     description: 'บันทึกการให้การพยาน นายประยุทธ์ พยานในคดี',
     tags: ['พยาน', 'ให้การ', 'สอบสวน'],
     relatedCharacters: [],
@@ -212,7 +212,7 @@ export const relationships = [
   { from: 'char-003', to: 'char-005', type: 'financial', label: 'รับเงิน', strength: 4 },
   { from: 'char-001', to: 'file-001', type: 'appears_in', label: 'ปรากฏใน', strength: 5 },
   { from: 'char-002', to: 'file-001', type: 'appears_in', label: 'ปรากฏใน', strength: 5 },
-  { from: 'char-003', to: 'file-002', type: 'appears_in', label: 'ปรากฏใน', strength: 5 },
+  { from: 'char-003', to: 'file-002', type: 'appears_in', label: 'ปรากฏ in', strength: 5 },
   { from: 'char-001', to: 'file-004', type: 'speaks_in', label: 'พูดใน', strength: 5 },
   { from: 'char-002', to: 'file-004', type: 'speaks_in', label: 'พูดใน', strength: 5 },
   { from: 'char-003', to: 'file-005', type: 'speaks_in', label: 'พูดใน', strength: 5 },
@@ -234,23 +234,7 @@ export const chatHistory = [
   {
     id: 'msg-002',
     type: 'ai',
-    content: `จากการวิเคราะห์ข้อมูล พบบุคคลที่เชื่อมโยงกับ **สมชาย ศรีวิจิตร (พ่อใหญ่)** ดังนี้:
-
-1. **วิไล มั่งมี (นายหญิง)** - ธุรการเงิน
-   - รับผิดชอบการโอนเงิน
-   - ปรากฏในวิดีโอการประชุม และบันทึกการสนทนา
-   
-2. **ธนกร เงินทอง (เด็ก)** - คนขับขนเงิน
-   - ถูกจ้างให้ขนส่งเงินสด
-   - ปรากฏในกล้องวงจรปิดขณะฝากเงิน
-   
-3. **อรุณ แสงสว่าง** - ทนายความ
-   - ให้คำปรึกษาด้านกฎหมาย
-   - ร่วมประชุมในวิดีโอ
-   
-4. **นพ.กิตติ ศักดิ์สิทธิ์ (หมอ)** - ช่องทางฟอกเงิน
-   - รับเงินผ่านคลินิก
-   - มีการติดต่อกับวิไลและธนกร`,
+    content: `จากการวิเคราะห์ข้อมูล พบบุคคลที่เชื่อมโยงกับ **สมชาย ศรีวิจิตร (พ่อใหญ่)** ดังนี้:\n\n1. **วิไล มั่งมี (นายหญิง)** - ธุรการเงิน\n   - รับผิดชอบการโอนเงิน\n   - ปรากฏในวิดีโอการประชุม และบันทึกการสนทนา\n   \n2. **ธนกร เงินทอง (เด็ก)** - คนขับขนเงิน\n   - ถูกจ้างให้ขนส่งเงินสด\n   - ปรากฏในกล้องวงจรปิดขณะฝากเงิน\n   \n3. **อรุณ แสงสว่าง** - ทนายความ\n   - ให้คำปรึกษาด้านกฎหมาย\n   - ร่วมประชุมในวิดีโอ\n   \n4. **นพ.กิตติ ศักดิ์สิทธิ์ (หมอ)** - ช่องทางฟอกเงิน\n   - รับเงินผ่านคลินิก\n   - มีการติดต่อกับวิไลและธนกร`,
     timestamp: '2024-03-21T10:30:05'
   },
   {
@@ -262,29 +246,7 @@ export const chatHistory = [
   {
     id: 'msg-004',
     type: 'ai',
-    content: `📊 **เส้นทางการโอนเงินที่ตรวจพบ**
-
-\`\`\`
-[สมชาย "พ่อใหญ่"]
-        │
-        │ สั่งการ
-        ▼
-   [วิไล "นายหญิง"]
-        │
-        │ โอนเงิน 23.5 ล้านบาท
-        │ (ผ่านบริษัท สยามพัฒนาการ)
-        ▼
-[นพ.กิตติ "หมอ"] ──── แบ่ง 30% ────▶ [ธนกร "เด็ก"]
-        │
-        │ ฟอกเงินผ่าน
-        ▼
-   [คลินิกเวชกรรม 3 แห่ง]
-\`\`\`
-
-**สรุปยอดเงิน:**
-- ยอดโอนรวม: 23.5 ล้านบาท
-- จำนวนรายการ: 15 รายการ
-- ช่วงเวลา: กุมภาพันธ์ - มีนาคม 2567`,
+    content: `📊 **เส้นทางการโอนเงินที่ตรวจพบ**\n\n\`\`\`\n[สมชาย \"พ่อใหญ่\"]\n        │\n        │ สั่งการ\n        ▼\n   [วิไล \"นายหญิง\"]\n        │\n        │ โอนเงิน 23.5 ล้านบาท\n        │ (ผ่านบริษัท สยามพัฒนาการ)\n        ▼\n[นพ.กิตติ \"หมอ\"] ──── แบ่ง 30% ────▶ [ธนกร \"เด็ก\"]\n        │\n        │ ฟอกเงินผ่าน\n        ▼\n   [คลินิกเวชกรรม 3 แห่ง]\n\`\`\`\n\n**สรุปยอดเงิน:**\n- ยอดโอนรวม: 23.5 ล้านบาท\n- จำนวนรายการ: 15 รายการ\n- ช่วงเวลา: กุมภาพันธ์ - มีนาคม 2567`,
     timestamp: '2024-03-21T10:35:08'
   },
   {
@@ -296,24 +258,7 @@ export const chatHistory = [
   {
     id: 'msg-006',
     type: 'ai',
-    content: `📁 **หลักฐานที่เกี่ยวข้องกับการฟอกเงิน**
-
-**1. 📄 เอกสาร (2 ไฟล์)**
-- \`company_registration.pdf\` - จดทะเบียนบริษัทเปลือก
-- \`bank_transfer_evidence.pdf\` - หลักฐานการโอนเงิน 15 รายการ
-
-**2. 🎤 บันทึกเสียง (2 ไฟล์)**
-- \`call_intercept_001.mp3\` - สมชายสั่งการโอนเงิน
-- \`call_intercept_002.mp3\` - ธนกรและหมอแบ่งเงิน
-
-**3. 📹 วิดีโอ (2 ไฟล์)**
-- \`meeting_2024-03-15.mp4\` - ประชุมวางแผน
-- \`cctv_bank_deposit.mp4\` - ธนกรฝากเงินสด
-
-**4. 🖼️ ภาพ (1 ไฟล์)**
-- \`property_deed.jpg\` - โฉนดที่ดินที่ซื้อด้วยเงินฟอก
-
-**ความเชื่อมโยงหลัก:** บริษัท สยามพัฒนาการ → คลินิกเวชกรรม → ทรัพย์สิน`,
+    content: `📁 **หลักฐานที่เกี่ยวข้องกับการฟอกเงิน**\n\n**1. 📄 เอกสาร (2 ไฟล์)**\n- \`company_registration.pdf\` - จดทะเบียนบริษัทเปลือก\n- \`bank_transfer_evidence.pdf\` - หลักฐานการโอนเงิน 15 รายการ\n\n**2. 🎤 บันทึกเสียง (2 ไฟล์)**\n- \`call_intercept_001.mp3\` - สมชายสั่งการโอนเงิน\n- \`call_intercept_002.mp3\` - ธนกรและหมอแบ่งเงิน\n\n**3. 📹 วิดีโอ (2 ไฟล์)**\n- \`meeting_2024-03-15.mp4\` - ประชุมวางแผน\n- \`cctv_bank_deposit.mp4\` - ธนกรฝากเงินสด\n\n**4. 🖼️ ภาพ (1 ไฟล์)**\n- \`property_deed.jpg\` - โฉนดที่ดินที่ซื้อด้วยเงินฟอก\n\n**ความเชื่อมโยงหลัก:** บริษัท สยามพัฒนาการ → คลินิกเวชกรรม → ทรัพย์สิน`,
     timestamp: '2024-03-21T10:40:10'
   }
 ];

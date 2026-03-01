@@ -25,15 +25,34 @@ function FilesPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const audioRef = useRef(null)
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause()
+        setIsPlaying(false)
       } else {
-        audioRef.current.play()
+        try {
+          audioRef.current.currentTime = audioRef.current.currentTime || 0
+          await audioRef.current.play()
+          setIsPlaying(true)
+        } catch (err) {
+          console.error('Audio play failed:', err)
+          setIsPlaying(false)
+        }
       }
-      setIsPlaying(!isPlaying)
     }
+  }
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false)
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0
+    }
+  }
+
+  const handleAudioError = (e) => {
+    console.error('Audio error:', e)
+    setIsPlaying(false)
   }
 
   const handleFileSelect = (file) => {
@@ -260,7 +279,9 @@ function FilesPage() {
                       <audio
                         ref={audioRef}
                         src={selectedFile.url}
-                        onEnded={() => setIsPlaying(false)}
+                        onEnded={handleAudioEnded}
+                        onError={handleAudioError}
+                        preload="metadata"
                         className="hidden"
                       />
                     </div>
@@ -296,7 +317,9 @@ function FilesPage() {
                       <audio
                         ref={audioRef}
                         src={selectedFile.url}
-                        onEnded={() => setIsPlaying(false)}
+                        onEnded={handleAudioEnded}
+                        onError={handleAudioError}
+                        preload="metadata"
                         className="hidden"
                       />
                     </div>

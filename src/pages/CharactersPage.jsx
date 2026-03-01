@@ -118,14 +118,14 @@ function CharactersPage() {
               >
                 {/* Avatar */}
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-14 h-14 bg-fbi-dark rounded-lg flex items-center justify-center overflow-hidden">
-                    <img 
-                      src={char.image} 
+                  <div className="w-20 h-20 bg-fbi-dark rounded-lg flex items-center justify-center overflow-hidden">
+                    <img
+                      src={char.image}
                       alt={char.name}
                       className="w-full h-full object-cover"
                       onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     />
-                    <User className="w-8 h-8 text-fbi-muted hidden" />
+                    <User className="w-10 h-10 text-fbi-muted hidden" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white font-medium truncate">{char.name}</h3>
@@ -183,14 +183,14 @@ function CharactersPage() {
           <div className="flex-1 overflow-y-auto p-4">
             {/* Avatar */}
             <div className="flex flex-col items-center mb-6">
-              <div className="w-24 h-24 bg-fbi-navy rounded-lg flex items-center justify-center mb-3 overflow-hidden">
-                <img 
-                  src={selectedCharacter.image} 
+              <div className="w-32 h-32 bg-fbi-navy rounded-lg flex items-center justify-center mb-3 overflow-hidden">
+                <img
+                  src={selectedCharacter.image}
                   alt={selectedCharacter.name}
                   className="w-full h-full object-cover"
                   onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                 />
-                <User className="w-14 h-14 text-fbi-muted hidden" />
+                <User className="w-16 h-16 text-fbi-muted hidden" />
               </div>
               <h4 className="text-white font-medium text-lg">{selectedCharacter.name}</h4>
               {selectedCharacter.alias && (
