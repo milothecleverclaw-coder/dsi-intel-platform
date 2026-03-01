@@ -13,13 +13,11 @@ import {
 
 function DiagramPage() {
   const canvasRef = useRef(null)
-  const containerRef = useRef(null)
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState(null)
   const [filterType, setFilterType] = useState('all')
   const [hoveredConnection, setHoveredConnection] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   // Calculate node positions in a circular layout
   const calculatePositions = () => {
@@ -44,16 +42,20 @@ function DiagramPage() {
 
   const [nodes, setNodes] = useState(calculatePositions())
 
-  // Get canvas coordinates from mouse event
+  // Get canvas coordinates from mouse event - FIXED
   const getCanvasCoords = useCallback((e) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
+    
     const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    
     return {
-      x: (e.clientX - rect.left) / zoom,
-      y: (e.clientY - rect.top) / zoom
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
     }
-  }, [zoom])
+  }, [])
 
   // Calculate distance from point to line segment
   const distanceToLineSegment = (px, py, x1, y1, x2, y2) => {
@@ -91,7 +93,7 @@ function DiagramPage() {
   // Calculate distance from point to quadratic bezier curve
   const distanceToQuadraticCurve = (px, py, x0, y0, xc, yc, x1, y1) => {
     let minDist = Infinity
-    const steps = 30
+    const steps = 25
     let prevX = x0
     let prevY = y0
 
@@ -112,13 +114,12 @@ function DiagramPage() {
   // Handle mouse move for hover detection
   const handleCanvasMouseMove = useCallback((e) => {
     const { x, y } = getCanvasCoords(e)
-    setMousePos({ x: e.clientX, y: e.clientY })
 
-    // Find hovered node (larger hit area - 40px radius)
+    // Find hovered node
     const node = nodes.find(n => {
       const dx = n.x - x
       const dy = n.y - y
-      return Math.sqrt(dx * dx + dy * dy) < 40
+      return Math.sqrt(dx * dx + dy * dy) < 35
     })
     setHoveredNode(node || null)
 
@@ -135,8 +136,7 @@ function DiagramPage() {
       const midY = (fromNode.y + toNode.y) / 2 - 20
 
       const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
-      // Larger hit area for lines (25px)
-      if (dist < 25 && dist < minDist) {
+      if (dist < 20 && dist < minDist) {
         minDist = dist
         connection = rel
       }
@@ -158,7 +158,7 @@ function DiagramPage() {
     const clickedNode = nodes.find(n => {
       const dx = n.x - x
       const dy = n.y - y
-      return Math.sqrt(dx * dx + dy * dy) < 40
+      return Math.sqrt(dx * dx + dy * dy) < 35
     })
 
     if (clickedNode) {
@@ -179,7 +179,7 @@ function DiagramPage() {
       const midY = (fromNode.y + toNode.y) / 2 - 20
 
       const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
-      if (dist < 25 && dist < minDist) {
+      if (dist < 20 && dist < minDist) {
         minDist = dist
         clickedConnection = rel
       }
@@ -200,26 +200,28 @@ function DiagramPage() {
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
-    const width = canvas.width
-    const height = canvas.height
-
-    // Clear canvas
+    
+    // Clear and set background
     ctx.fillStyle = '#0a0e17'
-    ctx.fillRect(0, 0, width, height)
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Save context for zoom
+    ctx.save()
+    ctx.scale(zoom, zoom)
 
     // Draw grid
     ctx.strokeStyle = '#1e293b'
-    ctx.lineWidth = 0.5
-    for (let x = 0; x < width; x += 50) {
+    ctx.lineWidth = 0.5 / zoom
+    for (let x = 0; x < 800; x += 50) {
       ctx.beginPath()
       ctx.moveTo(x, 0)
-      ctx.lineTo(x, height)
+      ctx.lineTo(x, 600)
       ctx.stroke()
     }
-    for (let y = 0; y < height; y += 50) {
+    for (let y = 0; y < 600; y += 50) {
       ctx.beginPath()
       ctx.moveTo(0, y)
-      ctx.lineTo(width, y)
+      ctx.lineTo(800, y)
       ctx.stroke()
     }
 
@@ -236,28 +238,19 @@ function DiagramPage() {
       const midX = (fromNode.x + toNode.x) / 2
       const midY = (fromNode.y + toNode.y) / 2 - 20
 
-      // Draw thick invisible hit area first
-      ctx.beginPath()
-      ctx.strokeStyle = 'transparent'
-      ctx.lineWidth = 30
-      ctx.moveTo(fromNode.x, fromNode.y)
-      ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
-      ctx.stroke()
-
-      // Draw visible line
       ctx.beginPath()
       ctx.strokeStyle = isHovered ? '#60a5fa' : isHighlighted ? '#3b82f6' : '#1e3a5f'
-      ctx.lineWidth = isHovered ? 4 : isHighlighted ? 3 : 2
+      ctx.lineWidth = isHovered ? 3 : isHighlighted ? 2 : 1
       ctx.moveTo(fromNode.x, fromNode.y)
       ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
       ctx.stroke()
 
-      // Draw arrow at midpoint
+      // Draw label
       if (isHovered || isHighlighted) {
-        ctx.fillStyle = isHovered ? '#60a5fa' : '#3b82f6'
-        ctx.beginPath()
-        ctx.arc(midX, midY, 4, 0, 2 * Math.PI)
-        ctx.fill()
+        ctx.fillStyle = '#3b82f6'
+        ctx.font = '10px JetBrains Mono, monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText(rel.label, midX, midY - 5)
       }
     })
 
@@ -271,30 +264,20 @@ function DiagramPage() {
           (r.to === selectedNode.id && r.from === node.id)
         )
 
-      // Hover glow effect
-      if (isHovered) {
-        ctx.beginPath()
-        ctx.arc(node.x, node.y, 45, 0, 2 * Math.PI)
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'
-        ctx.fill()
-      }
-
       // Node circle
       ctx.beginPath()
-      ctx.arc(node.x, node.y, isSelected ? 35 : 28, 0, 2 * Math.PI)
-      ctx.fillStyle = isSelected ? '#3b82f6' : isHovered ? '#2563eb' : isConnected ? '#1e3a5f' : '#1a2332'
+      ctx.arc(node.x, node.y, isSelected ? 30 : 25, 0, 2 * Math.PI)
+      ctx.fillStyle = isSelected ? '#3b82f6' : isConnected ? '#1e3a5f' : '#1a2332'
       ctx.fill()
-      
-      // Node border
       ctx.strokeStyle = isSelected ? '#60a5fa' : isHovered ? '#93c5fd' : isConnected ? '#3b82f6' : '#1e293b'
-      ctx.lineWidth = isSelected ? 4 : isHovered ? 3 : 2
+      ctx.lineWidth = isSelected ? 3 : isHovered ? 3 : 2
       ctx.stroke()
 
-      // Node icon
-      ctx.fillStyle = isSelected || isHovered || isConnected ? '#ffffff' : '#64748b'
-      ctx.font = '16px sans-serif'
+      // Node icon - use text with proper alignment
+      ctx.font = '14px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
+      ctx.fillStyle = isSelected || isHovered || isConnected ? '#ffffff' : '#64748b'
       
       if (node.type === 'character') {
         ctx.fillText('👤', node.x, node.y)
@@ -302,22 +285,19 @@ function DiagramPage() {
         ctx.fillText('📁', node.x, node.y)
       }
 
-      // Node label background
+      // Node label
+      ctx.fillStyle = '#ffffff'
+      ctx.font = '11px JetBrains Mono, monospace'
+      ctx.textAlign = 'center'
       const label = node.type === 'character' 
         ? (node.alias || node.name.split(' ')[0]) 
         : node.name.split('.')[0]
-      ctx.font = 'bold 12px JetBrains Mono'
-      const textWidth = ctx.measureText(label).width
-      
-      ctx.fillStyle = '#0a0e17'
-      ctx.fillRect(node.x - textWidth/2 - 4, node.y + 38, textWidth + 8, 18)
-      
-      // Node label
-      ctx.fillStyle = isHovered || isSelected ? '#60a5fa' : '#ffffff'
-      ctx.fillText(label, node.x, node.y + 48)
+      ctx.fillText(label, node.x, node.y + 40)
     })
 
-  }, [nodes, selectedNode, hoveredConnection, hoveredNode, relationships])
+    ctx.restore()
+
+  }, [nodes, selectedNode, hoveredConnection, hoveredNode, zoom, relationships])
 
   return (
     <div className="h-full flex">
@@ -371,52 +351,20 @@ function DiagramPage() {
         </div>
 
         {/* Canvas Container */}
-        <div ref={containerRef} className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-auto relative bg-fbi-darker">
           <canvas
             ref={canvasRef}
             width={800}
             height={600}
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMouseMove}
-            className="w-full h-full"
+            className="cursor-pointer"
             style={{ 
-              transform: `scale(${zoom})`, 
-              transformOrigin: 'top left',
-              imageRendering: 'crisp-edges'
+              width: `${800 * zoom}px`,
+              height: `${600 * zoom}px`,
+              imageRendering: 'auto'
             }}
           />
-          
-          {/* Hover Tooltip for Connections */}
-          {hoveredConnection && (
-            <div 
-              className="absolute pointer-events-none bg-fbi-navy border border-fbi-accent px-3 py-2 rounded shadow-lg z-10"
-              style={{
-                left: mousePos.x + 10,
-                top: mousePos.y - 40
-              }}
-            >
-              <p className="text-xs text-fbi-accent font-medium">
-                {hoveredConnection.label}
-              </p>
-              <p className="text-xs text-fbi-muted">
-                {nodes.find(n => n.id === hoveredConnection.from)?.name} → {nodes.find(n => n.id === hoveredConnection.to)?.name}
-              </p>
-            </div>
-          )}
-          
-          {/* Hover Tooltip for Nodes */}
-          {hoveredNode && !hoveredConnection && (
-            <div 
-              className="absolute pointer-events-none bg-fbi-navy border border-fbi-accent px-3 py-2 rounded shadow-lg z-10"
-              style={{
-                left: mousePos.x + 10,
-                top: mousePos.y - 40
-              }}
-            >
-              <p className="text-xs text-white font-medium">{hoveredNode.name}</p>
-              <p className="text-xs text-fbi-muted">{hoveredNode.type === 'character' ? 'ตัวละคร' : 'ไฟล์'}</p>
-            </div>
-          )}
         </div>
 
         {/* Legend */}
