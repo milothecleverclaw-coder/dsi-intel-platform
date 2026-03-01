@@ -57,3 +57,17 @@ body {
 .pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+
+/* Thin scrollbar for quick questions */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #0f1629;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #1e3a5f;
+  border-radius: 2px;
+}

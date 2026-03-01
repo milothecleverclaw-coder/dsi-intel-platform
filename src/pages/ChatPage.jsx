@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { chatHistory as initialChatHistory } from '../data/mockData'
+import { chatHistory as initialChatHistory, caseInfo } from '../data/mockData'
 import {
   Send,
   Bot,
@@ -9,15 +9,63 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
-  Users
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
+  Clock,
+  Shield
 } from 'lucide-react'
+
+// Mock cases for sidebar
+const mockCases = [
+  {
+    id: 'DSI-2024-0315',
+    name: 'Operation Black Lotus',
+    thaiName: 'ดอกบัวดำ',
+    status: 'active',
+    priority: 'high',
+    date: '2024-03-15',
+    lead: 'พ.ต.อ. สมศักดิ์ ไทย'
+  },
+  {
+    id: 'DSI-2024-0287',
+    name: 'Operation Red Dragon',
+    thaiName: 'มังกรแดง',
+    status: 'active',
+    priority: 'medium',
+    date: '2024-02-20',
+    lead: 'พ.ต.ท. วิชัย รัตน์'
+  },
+  {
+    id: 'DSI-2024-0156',
+    name: 'Operation Silver Hawk',
+    thaiName: 'เหยี่ยวเงิน',
+    status: 'closed',
+    priority: 'high',
+    date: '2024-01-10',
+    lead: 'พ.ต.อ. นภา สงวน'
+  },
+  {
+    id: 'DSI-2024-0320',
+    name: 'Operation Golden Tiger',
+    thaiName: 'เสือทอง',
+    status: 'pending',
+    priority: 'low',
+    date: '2024-03-20',
+    lead: 'พ.ต.ท. สุรชัย พล'
+  }
+]
 
 function ChatPage() {
   const [messages, setMessages] = useState(initialChatHistory)
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [chatMode, setChatMode] = useState('private') // 'private' or 'room'
+  const [chatMode, setChatMode] = useState('private')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [selectedCase, setSelectedCase] = useState(mockCases[0])
   const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -30,7 +78,6 @@ function ChatPage() {
   const handleSend = () => {
     if (!inputValue.trim()) return
 
-    // Add user message
     const userMessage = {
       id: `msg-${Date.now()}`,
       type: 'user',
@@ -41,7 +88,6 @@ function ChatPage() {
     setInputValue('')
     setIsTyping(true)
 
-    // Simulate AI response
     setTimeout(() => {
       const aiResponses = {
         'ใครเชื่อมโยงกับสมชายบ้าง': `จากการวิเคราะห์ข้อมูล พบบุคคลที่เชื่อมโยงกับ **สมชาย ศรีวิจิตร (พ่อใหญ่)** ดังนี้:
@@ -96,12 +142,97 @@ function ChatPage() {
     'วิไลพูดอะไรกับสมชายในวันที่ 15 มีนาคม'
   ]
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'bg-green-500'
+      case 'closed': return 'bg-gray-500'
+      case 'pending': return 'bg-yellow-500'
+      default: return 'bg-gray-500'
+    }
+  }
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'text-red-400'
+      case 'medium': return 'text-yellow-400'
+      case 'low': return 'text-green-400'
+      default: return 'text-gray-400'
+    }
+  }
+
   return (
-    <div className="h-full flex">
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Chat Header */}
-        <div className="bg-fbi-dark border-b border-fbi-border p-4">
+    <div className="h-full flex overflow-hidden">
+      {/* Collapsible Left Sidebar - Cases */}
+      <div 
+        className={`bg-fbi-dark border-r border-fbi-border flex flex-col transition-all duration-300 ${
+          sidebarOpen ? 'w-72' : 'w-0'
+        }`}
+      >
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-fbi-border flex-shrink-0">
+          <h3 className="text-sm font-medium text-white flex items-center gap-2">
+            <FolderOpen className="w-4 h-4 text-fbi-accent" />
+            คดีทั้งหมด
+          </h3>
+          <p className="text-xs text-fbi-muted mt-1">{mockCases.length} คดีในระบบ</p>
+        </div>
+
+        {/* Cases List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {mockCases.map((caseItem) => (
+            <button
+              key={caseItem.id}
+              onClick={() => setSelectedCase(caseItem)}
+              className={`w-full text-left p-3 rounded-lg border transition-all ${
+                selectedCase.id === caseItem.id
+                  ? 'bg-fbi-navy border-fbi-accent'
+                  : 'bg-fbi-dark border-fbi-border hover:border-fbi-accent/50'
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <div className={`w-2 h-2 rounded-full mt-1.5 ${getStatusColor(caseItem.status)}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{caseItem.name}</p>
+                  <p className="text-xs text-fbi-muted">{caseItem.thaiName}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className={`text-xs ${getPriorityColor(caseItem.priority)}`}>
+                      {caseItem.priority === 'high' ? 'สูง' : caseItem.priority === 'medium' ? 'ปานกลาง' : 'ต่ำ'}
+                    </span>
+                    <span className="text-xs text-fbi-muted">•</span>
+                    <span className="text-xs text-fbi-muted">{caseItem.id}</span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-fbi-border flex-shrink-0">
+          <button className="w-full flex items-center justify-center gap-2 bg-fbi-accent hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition-colors">
+            <Shield className="w-4 h-4" />
+            สร้างคดีใหม่
+          </button>
+        </div>
+      </div>
+
+      {/* Sidebar Toggle Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-fbi-dark border border-fbi-border border-l-0 rounded-r-lg p-2 hover:bg-fbi-navy transition-colors"
+        style={{ marginLeft: sidebarOpen ? '18rem' : '0' }}
+      >
+        {sidebarOpen ? (
+          <ChevronLeft className="w-4 h-4 text-fbi-muted" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-fbi-muted" />
+        )}
+      </button>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Chat Header - Fixed */}
+        <div className="bg-fbi-dark border-b border-fbi-border p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-fbi-accent/20 rounded-lg flex items-center justify-center">
@@ -109,7 +240,10 @@ function ChatPage() {
               </div>
               <div>
                 <h3 className="text-white font-medium">AI ผู้ช่วยสืบสวน</h3>
-                <p className="text-xs text-fbi-muted">DSI Intelligence Assistant</p>
+                <p className="text-xs text-fbi-muted flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {selectedCase.name} ({selectedCase.id})
+                </p>
               </div>
             </div>
 
@@ -141,8 +275,11 @@ function ChatPage() {
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Messages - Scrollable only this section */}
+        <div 
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0"
+        >
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -209,15 +346,15 @@ function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Questions */}
-        <div className="px-4 py-2 border-t border-fbi-border bg-fbi-dark/50">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {/* Quick Questions - Fixed above input */}
+        <div className="px-4 py-2 border-t border-fbi-border bg-fbi-dark flex-shrink-0">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
             <Sparkles className="w-4 h-4 text-fbi-accent flex-shrink-0" />
             {quickQuestions.map((q, idx) => (
               <button
                 key={idx}
                 onClick={() => setInputValue(q)}
-                className="px-3 py-1 bg-fbi-navy hover:bg-fbi-blue rounded-full text-xs text-fbi-muted hover:text-white whitespace-nowrap transition-colors"
+                className="px-3 py-1 bg-fbi-navy hover:bg-fbi-blue rounded-full text-xs text-fbi-muted hover:text-white whitespace-nowrap transition-colors flex-shrink-0"
               >
                 {q}
               </button>
@@ -225,8 +362,8 @@ function ChatPage() {
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 border-t border-fbi-border bg-fbi-dark">
+        {/* Input Area - Fixed at bottom */}
+        <div className="p-4 border-t border-fbi-border bg-fbi-dark flex-shrink-0">
           <div className="flex gap-2">
             <input
               type="text"
@@ -249,13 +386,13 @@ function ChatPage() {
 
       {/* Side Panel - Chat Room Info */}
       {chatMode === 'room' && (
-        <div className="w-72 bg-fbi-dark border-l border-fbi-border flex flex-col">
-          <div className="p-4 border-b border-fbi-border">
-            <h3 className="text-sm font-medium text-white">ห้องรวม: DSI-2024-0315</h3>
+        <div className="w-72 bg-fbi-dark border-l border-fbi-border flex flex-col flex-shrink-0">
+          <div className="p-4 border-b border-fbi-border flex-shrink-0">
+            <h3 className="text-sm font-medium text-white">ห้องรวม: {selectedCase.id}</h3>
             <p className="text-xs text-fbi-muted mt-1">3 คนออนไลน์</p>
           </div>
 
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-4 overflow-y-auto">
             <h4 className="text-xs font-medium text-fbi-muted mb-3">เจ้าหน้าที่ในห้อง</h4>
             <div className="space-y-3">
               {[
@@ -281,7 +418,7 @@ function ChatPage() {
             </div>
           </div>
 
-          <div className="p-4 border-t border-fbi-border">
+          <div className="p-4 border-t border-fbi-border flex-shrink-0">
             <h4 className="text-xs font-medium text-fbi-muted mb-3">กิจกรรมล่าสุด</h4>
             <div className="space-y-2 text-xs">
               <div className="bg-fbi-navy p-2 rounded">
