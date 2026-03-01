@@ -13,10 +13,10 @@ import {
 
 function DiagramPage() {
   const canvasRef = useRef(null)
+  const containerRef = useRef(null)
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState(null)
   const [filterType, setFilterType] = useState('all')
-  const [hoveredConnection, setHoveredConnection] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
 
   // Calculate node positions in a circular layout
@@ -42,14 +42,14 @@ function DiagramPage() {
 
   const [nodes, setNodes] = useState(calculatePositions())
 
-  // Get canvas coordinates from mouse event - FIXED
+  // Get canvas coordinates from mouse event
   const getCanvasCoords = useCallback((e) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     
     const rect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / rect.width
-    const scaleY = canvas.height / rect.height
+    const scaleX = 800 / rect.width
+    const scaleY = 600 / rect.height
     
     return {
       x: (e.clientX - rect.left) * scaleX,
@@ -111,6 +111,11 @@ function DiagramPage() {
     return minDist
   }
 
+  // Get connected relationships for a node
+  const getConnectedRelationships = useCallback((nodeId) => {
+    return relationships.filter(r => r.from === nodeId || r.to === nodeId)
+  }, [])
+
   // Handle mouse move for hover detection
   const handleCanvasMouseMove = useCallback((e) => {
     const { x, y } = getCanvasCoords(e)
@@ -123,30 +128,10 @@ function DiagramPage() {
     })
     setHoveredNode(node || null)
 
-    // Find hovered connection
-    let connection = null
-    let minDist = Infinity
-
-    relationships.forEach((rel) => {
-      const fromNode = nodes.find(n => n.id === rel.from)
-      const toNode = nodes.find(n => n.id === rel.to)
-      if (!fromNode || !toNode) return
-
-      const midX = (fromNode.x + toNode.x) / 2
-      const midY = (fromNode.y + toNode.y) / 2 - 20
-
-      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
-      if (dist < 20 && dist < minDist) {
-        minDist = dist
-        connection = rel
-      }
-    })
-    setHoveredConnection(connection)
-
     // Update cursor
     const canvas = canvasRef.current
     if (canvas) {
-      canvas.style.cursor = (node || connection) ? 'pointer' : 'default'
+      canvas.style.cursor = node ? 'pointer' : 'default'
     }
   }, [nodes, getCanvasCoords])
 
@@ -154,44 +139,13 @@ function DiagramPage() {
   const handleCanvasClick = useCallback((e) => {
     const { x, y } = getCanvasCoords(e)
 
-    // First check nodes
     const clickedNode = nodes.find(n => {
       const dx = n.x - x
       const dy = n.y - y
       return Math.sqrt(dx * dx + dy * dy) < 35
     })
 
-    if (clickedNode) {
-      setSelectedNode(clickedNode)
-      return
-    }
-
-    // Check connections
-    let clickedConnection = null
-    let minDist = Infinity
-
-    relationships.forEach((rel) => {
-      const fromNode = nodes.find(n => n.id === rel.from)
-      const toNode = nodes.find(n => n.id === rel.to)
-      if (!fromNode || !toNode) return
-
-      const midX = (fromNode.x + toNode.x) / 2
-      const midY = (fromNode.y + toNode.y) / 2 - 20
-
-      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
-      if (dist < 20 && dist < minDist) {
-        minDist = dist
-        clickedConnection = rel
-      }
-    })
-
-    // If clicked on connection, select one of its nodes
-    if (clickedConnection) {
-      const fromNode = nodes.find(n => n.id === clickedConnection.from)
-      setSelectedNode(fromNode || null)
-    } else {
-      setSelectedNode(null)
-    }
+    setSelectedNode(clickedNode || null)
   }, [nodes, getCanvasCoords])
 
   // Draw the diagram
@@ -225,28 +179,46 @@ function DiagramPage() {
       ctx.stroke()
     }
 
-    // Draw connections
+    // Get highlighted node (selected or hovered)
+    const highlightedNode = selectedNode || hoveredNode
+    const connectedRelIds = highlightedNode 
+      ? new Set(getConnectedRelationships(highlightedNode.id).map(r => r.id))
+      : new Set()
+
+    // Draw connections - only show related lines when node is highlighted
     relationships.forEach((rel) => {
       const fromNode = nodes.find(n => n.id === rel.from)
       const toNode = nodes.find(n => n.id === rel.to)
       if (!fromNode || !toNode) return
 
-      const isHovered = hoveredConnection?.id === rel.id
-      const isHighlighted = selectedNode && 
-        (selectedNode.id === rel.from || selectedNode.id === rel.to)
+      // Only show line if it's connected to highlighted node, or if no node is highlighted
+      const isConnected = connectedRelIds.has(rel.id)
+      
+      if (highlightedNode && !isConnected) {
+        // Dimmed line for unrelated connections
+        ctx.beginPath()
+        ctx.strokeStyle = '#0f1629'
+        ctx.lineWidth = 1
+        const midX = (fromNode.x + toNode.x) / 2
+        const midY = (fromNode.y + toNode.y) / 2 - 20
+        ctx.moveTo(fromNode.x, fromNode.y)
+        ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
+        ctx.stroke()
+        return
+      }
 
+      // Highlighted/normal line
+      ctx.beginPath()
+      ctx.strokeStyle = isConnected ? '#3b82f6' : '#1e3a5f'
+      ctx.lineWidth = isConnected ? 2 : 1
       const midX = (fromNode.x + toNode.x) / 2
       const midY = (fromNode.y + toNode.y) / 2 - 20
-
-      ctx.beginPath()
-      ctx.strokeStyle = isHovered ? '#60a5fa' : isHighlighted ? '#3b82f6' : '#1e3a5f'
-      ctx.lineWidth = isHovered ? 3 : isHighlighted ? 2 : 1
       ctx.moveTo(fromNode.x, fromNode.y)
       ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
       ctx.stroke()
 
-      // Draw label
-      if (isHovered || isHighlighted) {
+      // Draw label for connected lines
+      if (isConnected) {
         ctx.fillStyle = '#3b82f6'
         ctx.font = '10px JetBrains Mono, monospace'
         ctx.textAlign = 'center'
@@ -258,10 +230,10 @@ function DiagramPage() {
     nodes.forEach((node) => {
       const isSelected = selectedNode?.id === node.id
       const isHovered = hoveredNode?.id === node.id
-      const isConnected = selectedNode && 
+      const isConnected = highlightedNode && 
         relationships.some(r => 
-          (r.from === selectedNode.id && r.to === node.id) ||
-          (r.to === selectedNode.id && r.from === node.id)
+          (r.from === highlightedNode.id && r.to === node.id) ||
+          (r.to === highlightedNode.id && r.from === node.id)
         )
 
       // Node circle
@@ -273,7 +245,7 @@ function DiagramPage() {
       ctx.lineWidth = isSelected ? 3 : isHovered ? 3 : 2
       ctx.stroke()
 
-      // Node icon - use text with proper alignment
+      // Node icon
       ctx.font = '14px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
@@ -286,7 +258,7 @@ function DiagramPage() {
       }
 
       // Node label
-      ctx.fillStyle = '#ffffff'
+      ctx.fillStyle = isConnected || isSelected || isHovered ? '#ffffff' : '#64748b'
       ctx.font = '11px JetBrains Mono, monospace'
       ctx.textAlign = 'center'
       const label = node.type === 'character' 
@@ -297,14 +269,14 @@ function DiagramPage() {
 
     ctx.restore()
 
-  }, [nodes, selectedNode, hoveredConnection, hoveredNode, zoom, relationships])
+  }, [nodes, selectedNode, hoveredNode, zoom, getConnectedRelationships])
 
   return (
     <div className="h-full flex">
       {/* Diagram Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Toolbar */}
-        <div className="bg-fbi-dark border-b border-fbi-border p-4">
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Toolbar - Fixed */}
+        <div className="bg-fbi-dark border-b border-fbi-border p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
@@ -350,25 +322,27 @@ function DiagramPage() {
           </div>
         </div>
 
-        {/* Canvas Container */}
-        <div className="flex-1 overflow-auto relative bg-fbi-darker">
+        {/* Canvas Container - Grows to fill space, scrollable */}
+        <div 
+          ref={containerRef} 
+          className="flex-1 overflow-auto bg-fbi-darker relative min-h-0"
+        >
           <canvas
             ref={canvasRef}
             width={800}
             height={600}
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMouseMove}
-            className="cursor-pointer"
+            className="cursor-pointer block"
             style={{ 
               width: `${800 * zoom}px`,
               height: `${600 * zoom}px`,
-              imageRendering: 'auto'
             }}
           />
         </div>
 
-        {/* Legend */}
-        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs">
+        {/* Legend - Fixed at bottom */}
+        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs flex-shrink-0">
           <span className="text-fbi-muted">Legend:</span>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-fbi-accent rounded-full" />
@@ -386,7 +360,7 @@ function DiagramPage() {
       </div>
 
       {/* Detail Panel */}
-      <div className="w-80 bg-fbi-dark border-l border-fbi-border flex flex-col">
+      <div className="w-80 bg-fbi-dark border-l border-fbi-border flex flex-col flex-shrink-0">
         <div className="p-4 border-b border-fbi-border">
           <h3 className="text-sm font-medium text-white flex items-center gap-2">
             <Link2 className="w-4 h-4 text-fbi-accent" />
