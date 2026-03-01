@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { characters, relationships, files } from '../data/mockData'
 import {
   ZoomIn,
@@ -13,10 +13,13 @@ import {
 
 function DiagramPage() {
   const canvasRef = useRef(null)
+  const containerRef = useRef(null)
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState(null)
   const [filterType, setFilterType] = useState('all')
   const [hoveredConnection, setHoveredConnection] = useState(null)
+  const [hoveredNode, setHoveredNode] = useState(null)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   // Calculate node positions in a circular layout
   const calculatePositions = () => {
@@ -40,6 +43,156 @@ function DiagramPage() {
   }
 
   const [nodes, setNodes] = useState(calculatePositions())
+
+  // Get canvas coordinates from mouse event
+  const getCanvasCoords = useCallback((e) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: (e.clientX - rect.left) / zoom,
+      y: (e.clientY - rect.top) / zoom
+    }
+  }, [zoom])
+
+  // Calculate distance from point to line segment
+  const distanceToLineSegment = (px, py, x1, y1, x2, y2) => {
+    const A = px - x1
+    const B = py - y1
+    const C = x2 - x1
+    const D = y2 - y1
+
+    const dot = A * C + B * D
+    const lenSq = C * C + D * D
+    let param = -1
+
+    if (lenSq !== 0) {
+      param = dot / lenSq
+    }
+
+    let xx, yy
+
+    if (param < 0) {
+      xx = x1
+      yy = y1
+    } else if (param > 1) {
+      xx = x2
+      yy = y2
+    } else {
+      xx = x1 + param * C
+      yy = y1 + param * D
+    }
+
+    const dx = px - xx
+    const dy = py - yy
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  // Calculate distance from point to quadratic bezier curve
+  const distanceToQuadraticCurve = (px, py, x0, y0, xc, yc, x1, y1) => {
+    let minDist = Infinity
+    const steps = 30
+    let prevX = x0
+    let prevY = y0
+
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps
+      const bx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * xc + t * t * x1
+      const by = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * yc + t * t * y1
+      
+      const dist = distanceToLineSegment(px, py, prevX, prevY, bx, by)
+      minDist = Math.min(minDist, dist)
+      
+      prevX = bx
+      prevY = by
+    }
+    return minDist
+  }
+
+  // Handle mouse move for hover detection
+  const handleCanvasMouseMove = useCallback((e) => {
+    const { x, y } = getCanvasCoords(e)
+    setMousePos({ x: e.clientX, y: e.clientY })
+
+    // Find hovered node (larger hit area - 40px radius)
+    const node = nodes.find(n => {
+      const dx = n.x - x
+      const dy = n.y - y
+      return Math.sqrt(dx * dx + dy * dy) < 40
+    })
+    setHoveredNode(node || null)
+
+    // Find hovered connection
+    let connection = null
+    let minDist = Infinity
+
+    relationships.forEach((rel) => {
+      const fromNode = nodes.find(n => n.id === rel.from)
+      const toNode = nodes.find(n => n.id === rel.to)
+      if (!fromNode || !toNode) return
+
+      const midX = (fromNode.x + toNode.x) / 2
+      const midY = (fromNode.y + toNode.y) / 2 - 20
+
+      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
+      // Larger hit area for lines (25px)
+      if (dist < 25 && dist < minDist) {
+        minDist = dist
+        connection = rel
+      }
+    })
+    setHoveredConnection(connection)
+
+    // Update cursor
+    const canvas = canvasRef.current
+    if (canvas) {
+      canvas.style.cursor = (node || connection) ? 'pointer' : 'default'
+    }
+  }, [nodes, getCanvasCoords])
+
+  // Handle canvas click
+  const handleCanvasClick = useCallback((e) => {
+    const { x, y } = getCanvasCoords(e)
+
+    // First check nodes
+    const clickedNode = nodes.find(n => {
+      const dx = n.x - x
+      const dy = n.y - y
+      return Math.sqrt(dx * dx + dy * dy) < 40
+    })
+
+    if (clickedNode) {
+      setSelectedNode(clickedNode)
+      return
+    }
+
+    // Check connections
+    let clickedConnection = null
+    let minDist = Infinity
+
+    relationships.forEach((rel) => {
+      const fromNode = nodes.find(n => n.id === rel.from)
+      const toNode = nodes.find(n => n.id === rel.to)
+      if (!fromNode || !toNode) return
+
+      const midX = (fromNode.x + toNode.x) / 2
+      const midY = (fromNode.y + toNode.y) / 2 - 20
+
+      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
+      if (dist < 25 && dist < minDist) {
+        minDist = dist
+        clickedConnection = rel
+      }
+    })
+
+    // If clicked on connection, select one of its nodes
+    if (clickedConnection) {
+      const fromNode = nodes.find(n => n.id === clickedConnection.from)
+      setSelectedNode(fromNode || null)
+    } else {
+      setSelectedNode(null)
+    }
+  }, [nodes, getCanvasCoords])
 
   // Draw the diagram
   useEffect(() => {
@@ -76,50 +229,70 @@ function DiagramPage() {
       const toNode = nodes.find(n => n.id === rel.to)
       if (!fromNode || !toNode) return
 
-      const isHovered = hoveredConnection === rel
+      const isHovered = hoveredConnection?.id === rel.id
       const isHighlighted = selectedNode && 
         (selectedNode.id === rel.from || selectedNode.id === rel.to)
 
-      ctx.beginPath()
-      ctx.strokeStyle = isHovered || isHighlighted ? '#3b82f6' : '#1e3a5f'
-      ctx.lineWidth = isHovered || isHighlighted ? 2 : 1
-
-      // Draw curved line
       const midX = (fromNode.x + toNode.x) / 2
       const midY = (fromNode.y + toNode.y) / 2 - 20
+
+      // Draw thick invisible hit area first
+      ctx.beginPath()
+      ctx.strokeStyle = 'transparent'
+      ctx.lineWidth = 30
       ctx.moveTo(fromNode.x, fromNode.y)
       ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
       ctx.stroke()
 
-      // Draw label
+      // Draw visible line
+      ctx.beginPath()
+      ctx.strokeStyle = isHovered ? '#60a5fa' : isHighlighted ? '#3b82f6' : '#1e3a5f'
+      ctx.lineWidth = isHovered ? 4 : isHighlighted ? 3 : 2
+      ctx.moveTo(fromNode.x, fromNode.y)
+      ctx.quadraticCurveTo(midX, midY, toNode.x, toNode.y)
+      ctx.stroke()
+
+      // Draw arrow at midpoint
       if (isHovered || isHighlighted) {
-        ctx.fillStyle = '#3b82f6'
-        ctx.font = '10px JetBrains Mono'
-        ctx.fillText(rel.label, midX - 20, midY)
+        ctx.fillStyle = isHovered ? '#60a5fa' : '#3b82f6'
+        ctx.beginPath()
+        ctx.arc(midX, midY, 4, 0, 2 * Math.PI)
+        ctx.fill()
       }
     })
 
     // Draw nodes
     nodes.forEach((node) => {
       const isSelected = selectedNode?.id === node.id
+      const isHovered = hoveredNode?.id === node.id
       const isConnected = selectedNode && 
         relationships.some(r => 
           (r.from === selectedNode.id && r.to === node.id) ||
           (r.to === selectedNode.id && r.from === node.id)
         )
 
+      // Hover glow effect
+      if (isHovered) {
+        ctx.beginPath()
+        ctx.arc(node.x, node.y, 45, 0, 2 * Math.PI)
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)'
+        ctx.fill()
+      }
+
       // Node circle
       ctx.beginPath()
-      ctx.arc(node.x, node.y, isSelected ? 30 : 25, 0, 2 * Math.PI)
-      ctx.fillStyle = isSelected ? '#3b82f6' : isConnected ? '#1e3a5f' : '#1a2332'
+      ctx.arc(node.x, node.y, isSelected ? 35 : 28, 0, 2 * Math.PI)
+      ctx.fillStyle = isSelected ? '#3b82f6' : isHovered ? '#2563eb' : isConnected ? '#1e3a5f' : '#1a2332'
       ctx.fill()
-      ctx.strokeStyle = isSelected ? '#60a5fa' : isConnected ? '#3b82f6' : '#1e293b'
-      ctx.lineWidth = isSelected ? 3 : 2
+      
+      // Node border
+      ctx.strokeStyle = isSelected ? '#60a5fa' : isHovered ? '#93c5fd' : isConnected ? '#3b82f6' : '#1e293b'
+      ctx.lineWidth = isSelected ? 4 : isHovered ? 3 : 2
       ctx.stroke()
 
       // Node icon
-      ctx.fillStyle = isSelected || isConnected ? '#ffffff' : '#64748b'
-      ctx.font = '14px sans-serif'
+      ctx.fillStyle = isSelected || isHovered || isConnected ? '#ffffff' : '#64748b'
+      ctx.font = '16px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       
@@ -129,89 +302,22 @@ function DiagramPage() {
         ctx.fillText('📁', node.x, node.y)
       }
 
+      // Node label background
+      const label = node.type === 'character' 
+        ? (node.alias || node.name.split(' ')[0]) 
+        : node.name.split('.')[0]
+      ctx.font = 'bold 12px JetBrains Mono'
+      const textWidth = ctx.measureText(label).width
+      
+      ctx.fillStyle = '#0a0e17'
+      ctx.fillRect(node.x - textWidth/2 - 4, node.y + 38, textWidth + 8, 18)
+      
       // Node label
-      ctx.fillStyle = '#ffffff'
-      ctx.font = '11px JetBrains Mono'
-      ctx.fillText(
-        node.type === 'character' 
-          ? (node.alias || node.name.split(' ')[0]) 
-          : node.name.split('.')[0],
-        node.x,
-        node.y + 40
-      )
+      ctx.fillStyle = isHovered || isSelected ? '#60a5fa' : '#ffffff'
+      ctx.fillText(label, node.x, node.y + 48)
     })
 
-  }, [nodes, selectedNode, hoveredConnection, relationships])
-
-  const handleCanvasClick = (e) => {
-    const canvas = canvasRef.current
-    const rect = canvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / zoom
-    const y = (e.clientY - rect.top) / zoom
-
-    // Find clicked node
-    const clickedNode = nodes.find(node => {
-      const dx = node.x - x
-      const dy = node.y - y
-      return Math.sqrt(dx * dx + dy * dy) < 30
-    })
-
-    setSelectedNode(clickedNode || null)
-  }
-
-  // Calculate distance from point to quadratic bezier curve (approximate)
-  const distanceToQuadraticCurve = (px, py, x0, y0, xc, yc, x1, y1) => {
-    // Sample points along the curve and find minimum distance
-    let minDist = Infinity
-    const steps = 20
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps
-      // Quadratic bezier formula: B(t) = (1-t)^2 * P0 + 2(1-t)t * Pc + t^2 * P1
-      const bx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * xc + t * t * x1
-      const by = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * yc + t * t * y1
-      const dist = Math.sqrt((px - bx) ** 2 + (py - by) ** 2)
-      minDist = Math.min(minDist, dist)
-    }
-    return minDist
-  }
-
-  const handleCanvasMouseMove = (e) => {
-    const canvas = canvasRef.current
-    const rect = canvas.getBoundingClientRect()
-    const x = (e.clientX - rect.left) / zoom
-    const y = (e.clientY - rect.top) / zoom
-
-    // Find hovered connection
-    let found = null
-    let minDist = Infinity
-    relationships.forEach((rel) => {
-      const fromNode = nodes.find(n => n.id === rel.from)
-      const toNode = nodes.find(n => n.id === rel.to)
-      if (!fromNode || !toNode) return
-
-      // Calculate control point for quadratic curve
-      const midX = (fromNode.x + toNode.x) / 2
-      const midY = (fromNode.y + toNode.y) / 2 - 20
-
-      // Check distance to the curved line
-      const dist = distanceToQuadraticCurve(x, y, fromNode.x, fromNode.y, midX, midY, toNode.x, toNode.y)
-      if (dist < 15 && dist < minDist) {
-        minDist = dist
-        found = rel
-      }
-    })
-
-    setHoveredConnection(found)
-
-    // Change cursor if hovering over a connection or node
-    const hoveredNode = nodes.find(node => {
-      const dx = node.x - x
-      const dy = node.y - y
-      return Math.sqrt(dx * dx + dy * dy) < 30
-    })
-
-    canvas.style.cursor = (found || hoveredNode) ? 'pointer' : 'default'
-  }
+  }, [nodes, selectedNode, hoveredConnection, hoveredNode, relationships])
 
   return (
     <div className="h-full flex">
@@ -264,17 +370,53 @@ function DiagramPage() {
           </div>
         </div>
 
-        {/* Canvas */}
-        <div className="flex-1 overflow-hidden relative">
+        {/* Canvas Container */}
+        <div ref={containerRef} className="flex-1 overflow-hidden relative">
           <canvas
             ref={canvasRef}
             width={800}
             height={600}
             onClick={handleCanvasClick}
             onMouseMove={handleCanvasMouseMove}
-            className="w-full h-full cursor-pointer"
-            style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+            className="w-full h-full"
+            style={{ 
+              transform: `scale(${zoom})`, 
+              transformOrigin: 'top left',
+              imageRendering: 'crisp-edges'
+            }}
           />
+          
+          {/* Hover Tooltip for Connections */}
+          {hoveredConnection && (
+            <div 
+              className="absolute pointer-events-none bg-fbi-navy border border-fbi-accent px-3 py-2 rounded shadow-lg z-10"
+              style={{
+                left: mousePos.x + 10,
+                top: mousePos.y - 40
+              }}
+            >
+              <p className="text-xs text-fbi-accent font-medium">
+                {hoveredConnection.label}
+              </p>
+              <p className="text-xs text-fbi-muted">
+                {nodes.find(n => n.id === hoveredConnection.from)?.name} → {nodes.find(n => n.id === hoveredConnection.to)?.name}
+              </p>
+            </div>
+          )}
+          
+          {/* Hover Tooltip for Nodes */}
+          {hoveredNode && !hoveredConnection && (
+            <div 
+              className="absolute pointer-events-none bg-fbi-navy border border-fbi-accent px-3 py-2 rounded shadow-lg z-10"
+              style={{
+                left: mousePos.x + 10,
+                top: mousePos.y - 40
+              }}
+            >
+              <p className="text-xs text-white font-medium">{hoveredNode.name}</p>
+              <p className="text-xs text-fbi-muted">{hoveredNode.type === 'character' ? 'ตัวละคร' : 'ไฟล์'}</p>
+            </div>
+          )}
         </div>
 
         {/* Legend */}
