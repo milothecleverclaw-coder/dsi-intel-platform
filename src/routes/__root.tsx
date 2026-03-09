@@ -39,7 +39,18 @@ export const Route = createRootRouteWithContext<{
         content: "A minimal starter template for 🏝️ TanStack Start.",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      // Replace with your icons here, or remove if you have a favicon.ico in public/
+      {
+        rel: "icon",
+        href: "https://mugnavo.com/favicon.ico",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "https://mugnavo.com/apple-touch-icon.png",
+      },
+      { rel: "stylesheet", href: appCss },
+    ],
   }),
   component: RootComponent,
 });
