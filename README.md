@@ -1,11 +1,12 @@
 # [TanStarter](https://github.com/mugnavo/tanstarter)
 
-> [!TIP]
-> This template is also available as a monorepo, powered by Turborepo and pnpm workspaces. See [mugnavo/tanstarter-monorepo](https://github.com/mugnavo/tanstarter-monorepo).
-
 <!-- scaffold:description -->
 
 A minimal starter template for 🏝️ TanStack Start. [→ Preview here](https://tanstarter.mugnavo.com/)
+
+```bash
+pnpm create mugnavo@latest
+```
 
 - [React 19](https://react.dev) + [React Compiler](https://react.dev/learn/react-compiler)
 - TanStack [Start](https://tanstack.com/start/latest) + [Router](https://tanstack.com/router/latest) + [Query](https://tanstack.com/query/latest)
@@ -14,6 +15,9 @@ A minimal starter template for 🏝️ TanStack Start. [→ Preview here](https:
 - [Drizzle ORM](https://orm.drizzle.team/) + PostgreSQL
 - [Better Auth](https://www.better-auth.com/)
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter.html) + [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html)
+
+> [!TIP]
+> This template is also available as a monorepo, powered by Turborepo and pnpm workspaces. See [mugnavo/tanstarter-monorepo](https://github.com/mugnavo/tanstarter-monorepo).
 
 ## Getting Started
 
