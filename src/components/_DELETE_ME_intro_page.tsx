@@ -23,7 +23,7 @@ export function IntroPageDeleteMe() {
   const [isCopied, setIsCopied] = useState(false);
 
   const repoUrl = "https://github.com/mugnavo/tanstarter";
-  const cloneCommand = "pnpm create mugnavo@latest";
+  const cloneCommand = "pnpm create mugnavo";
 
   const copyToClipboard = async () => {
     try {

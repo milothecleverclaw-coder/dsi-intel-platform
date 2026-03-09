@@ -5,7 +5,7 @@
 A minimal starter template for 🏝️ TanStack Start. [→ Preview here](https://tanstarter.mugnavo.com/)
 
 ```bash
-pnpm create mugnavo@latest
+pnpm create mugnavo
 ```
 
 - [React 19](https://react.dev) + [React Compiler](https://react.dev/learn/react-compiler)
@@ -24,7 +24,7 @@ pnpm create mugnavo@latest
 1. [Use this template](https://github.com/new?template_name=tanstarter&template_owner=mugnavo) or create a project using our CLI:
 
    ```bash
-   pnpm create mugnavo@latest
+   pnpm create mugnavo
    ```
 
 2. Create a `.env` file based on [`.env.example`](./.env.example).
