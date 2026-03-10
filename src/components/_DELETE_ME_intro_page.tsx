@@ -42,25 +42,24 @@ export function IntroPageDeleteMe() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-3xl px-4 pt-16 pb-12 md:pt-32">
-        {/* Header */}
         <header className="mb-8">
           <div className="mb-6 flex items-center justify-between">
             <a href={repoUrl} className="flex items-center gap-2 hover:underline">
               <img
                 src="https://mugnavo.com/favicon-32x32.png"
                 alt="Mugnavo logo"
-                className="size-6"
+                className="size-5 md:size-6"
               />
-              <span className="text-xl font-semibold tracking-tight text-foreground">
+              <span className="text-lg font-semibold tracking-tight text-foreground md:text-xl">
                 tanstarter
               </span>
             </a>
             <ThemeToggle />
           </div>
 
-          <h1 className="mb-6 text-4xl font-bold tracking-tight md:text-6xl">
-            A <span className="text-yellow-500 dark:text-yellow-200">minimal</span> starter for
-            TanStack Start.
+          <h1 className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            A <span className="text-yellow-500 dark:text-yellow-200">minimal</span> starter template
+            for TanStack Start.
           </h1>
 
           <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl">
@@ -69,7 +68,6 @@ export function IntroPageDeleteMe() {
           </p>
         </header>
 
-        {/* Command Section */}
         <section className="mb-12">
           <div className="rounded-xl border border-border bg-card p-1 shadow-2xl">
             <div className="group flex items-center justify-between rounded-lg border border-border bg-card p-4">
@@ -104,24 +102,41 @@ export function IntroPageDeleteMe() {
           <UserAction />
         </Suspense>
 
-        {/* Features Grid */}
         <section className="mb-16 grid grid-cols-1 gap-x-12 gap-y-10 md:grid-cols-2">
           <Feature
-            title="TanStack Start"
-            desc="Harness the power of TanStack Router and Vite in a unified full-stack framework."
+            title="Full-Stack Foundation"
+            desc="Build on a modern full-stack framework with TanStack Start, Router, and Vite."
           />
           <Feature
-            title="Drizzle ORM, Better Auth, shadcn/ui"
-            desc="Only the essentials. Less complex boilerplate that you'll end up deleting anyway."
+            title="Only the Essentials"
+            desc="Drizzle ORM, Better Auth, shadcn/ui. Less boilerplate that you'll end up deleting anyway."
           />
           <Feature
             title="End-to-end Type Safety"
             desc="Effortless type safety powered by TanStack Router and Start server functions."
           />
           <Feature
-            title="Vite 8, Rolldown, Oxc"
-            desc="For the next generation of web apps with type-safe routing and next-gen tooling."
+            title="Next-Gen Tooling"
+            desc="Powered by Vite 8, Rolldown, and Oxc for a faster development workflow."
           />
+        </section>
+
+        <section className="mb-12 space-y-2">
+          {TECH_BADGE_ROWS.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex flex-wrap items-center justify-center gap-2">
+              {row.map((badge) => (
+                <a
+                  key={badge.alt}
+                  href={badge.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-opacity hover:opacity-80"
+                >
+                  <img alt={badge.alt} src={badge.src} />
+                </a>
+              ))}
+            </div>
+          ))}
         </section>
 
         <section className="mx-auto mb-16 hidden max-w-[60ch] space-y-3 bg-card/50 p-4 text-sm text-foreground/80 sm:block">
@@ -136,7 +151,6 @@ export function IntroPageDeleteMe() {
           <p>Happy coding!</p>
         </section>
 
-        {/* Footer */}
         <footer className="flex flex-col items-center justify-between gap-6 text-sm md:flex-row">
           <a
             href={repoUrl}
@@ -215,3 +229,96 @@ function Feature({ title, desc }: { title: string; desc: string }) {
     </div>
   );
 }
+
+interface TechBadge {
+  alt: string;
+  href: string;
+  src: string;
+}
+
+const CORE_BADGES: TechBadge[] = [
+  {
+    alt: "React version",
+    href: "https://react.dev",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies.react&label=react&style=flat-square",
+  },
+  {
+    alt: "React Compiler version",
+    href: "https://react.dev/learn/react-compiler",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.devDependencies%5B%22babel-plugin-react-compiler%22%5D&label=react-compiler&style=flat-square",
+  },
+  {
+    alt: "TanStack Start version",
+    href: "https://tanstack.com/start/latest",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies%5B%22%40tanstack%2Freact-start%22%5D&label=tanstack-start%2Frouter&style=flat-square",
+  },
+  {
+    alt: "TanStack Query version",
+    href: "https://tanstack.com/query/latest",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies%5B%22%40tanstack%2Freact-query%22%5D&label=tanstack-query&style=flat-square",
+  },
+];
+
+const UI_BADGES: TechBadge[] = [
+  {
+    alt: "Tailwind CSS version",
+    href: "https://tailwindcss.com/",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.devDependencies.tailwindcss&label=tailwindcss&style=flat-square",
+  },
+  {
+    alt: "shadcn/ui version",
+    href: "https://ui.shadcn.com/",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies.shadcn&label=shadcn%2Fui&style=flat-square",
+  },
+  {
+    alt: "Base UI version",
+    href: "https://base-ui.com/",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies%5B%22%40base-ui%2Freact%22%5D&label=base-ui&style=flat-square",
+  },
+];
+
+const DATA_BADGES: TechBadge[] = [
+  {
+    alt: "Drizzle ORM version",
+    href: "https://orm.drizzle.team/",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies%5B%22drizzle-orm%22%5D&label=drizzle-orm&style=flat-square",
+  },
+  {
+    alt: "Better Auth version",
+    href: "https://www.better-auth.com/",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies%5B%22better-auth%22%5D&label=better-auth&style=flat-square",
+  },
+];
+
+const PLATFORM_BADGES: TechBadge[] = [
+  {
+    alt: "Vite version",
+    href: "https://vite.dev/blog/announcing-vite8-beta",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.devDependencies.vite&label=vite&style=flat-square",
+  },
+  // {
+  //   alt: "Nitro version",
+  //   href: "https://v3.nitro.build/",
+  //   src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.dependencies.nitro&label=nitro%20v3&style=flat-square",
+  // },
+  {
+    alt: "Nitro version",
+    href: "https://v3.nitro.build/",
+    src: "https://img.shields.io/badge/nitro-v3--nightly-blue?style=flat-square",
+  },
+];
+
+const TOOLING_BADGES: TechBadge[] = [
+  {
+    alt: "Oxlint version",
+    href: "https://oxc.rs/docs/guide/usage/linter.html",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.devDependencies.oxlint&label=oxlint&style=flat-square",
+  },
+  {
+    alt: "Oxfmt version",
+    href: "https://oxc.rs/docs/guide/usage/formatter.html",
+    src: "https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmugnavo%2Ftanstarter%2Fmain%2Fpackage.json&query=%24.devDependencies.oxfmt&label=oxfmt&style=flat-square",
+  },
+];
+
+const TECH_BADGE_ROWS = [CORE_BADGES, UI_BADGES, DATA_BADGES, PLATFORM_BADGES, TOOLING_BADGES];
