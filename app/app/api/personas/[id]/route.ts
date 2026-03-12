@@ -73,6 +73,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       paramIndex++;
     }
 
+    if (body.notes !== undefined) {
+      updates.push(`notes = $${paramIndex}`);
+      values.push(body.notes);
+      paramIndex++;
+    }
+
     if (updates.length === 0) {
       return new Response(JSON.stringify({ message: 'No fields to update' }), { status: 400 });
     }

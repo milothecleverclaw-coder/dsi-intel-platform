@@ -21,6 +21,7 @@ interface Persona {
   aliases: string[];
   phones: string[];
   role: string;
+  notes?: string;
   twelve_labs_collection_id?: string;
 }
 
@@ -54,6 +55,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
     aliases: '',
     phones: '',
     role: 'suspect',
+    notes: '',
   });
   const [loading, setLoading] = useState(false);
   
@@ -68,6 +70,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
     aliases: '',
     phones: '',
     role: 'suspect',
+    notes: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -107,9 +110,10 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
           aliases: JSON.stringify(form.aliases.split(',').map((s) => s.trim()).filter(Boolean)),
           phones: JSON.stringify(form.phones.split(',').map((s) => s.trim()).filter(Boolean)),
           role: form.role,
+          notes: form.notes,
         }),
       });
-      setForm({ first_name_th: '', last_name_th: '', first_name_en: '', last_name_en: '', aliases: '', phones: '', role: 'suspect' });
+      setForm({ first_name_th: '', last_name_th: '', first_name_en: '', last_name_en: '', aliases: '', phones: '', role: 'suspect', notes: '' });
       fetchPersonas();
     } catch (e) {
       alert('เพิ่มบุคคลไม่สำเร็จ');
@@ -128,6 +132,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
       aliases: persona.aliases?.join(', ') || '',
       phones: persona.phones?.join(', ') || '',
       role: persona.role || 'suspect',
+      notes: persona.notes || '',
     });
     setEditDialogOpen(true);
   };
@@ -147,6 +152,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
           aliases: editForm.aliases.split(',').map((s) => s.trim()).filter(Boolean),
           phones: editForm.phones.split(',').map((s) => s.trim()).filter(Boolean),
           role: editForm.role,
+          notes: editForm.notes,
         }),
       });
 
@@ -375,6 +381,15 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
             />
           </div>
           <div>
+            <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">หมายเหตุ</label>
+            <Input 
+              value={form.notes} 
+              onChange={(e) => setForm({ ...form, notes: e.target.value })} 
+              placeholder="ข้อมูลเพิ่มเติมเกี่ยวกับบุคคลนี้"
+              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
+            />
+          </div>
+          <div>
             <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">บทบาท</label>
             <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
               <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-50 focus:ring-yellow-500/20">
@@ -444,6 +459,9 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                       <Phone className="h-3 w-3" />
                       {p.phones.join(', ')}
                     </p>
+                  )}
+                  {p.notes && (
+                    <p className="text-sm text-slate-500 mt-1 italic">หมายเหตุ: {p.notes}</p>
                   )}
                   
                   {/* Action Buttons */}
@@ -557,6 +575,15 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                 value={editForm.phones} 
                 onChange={(e) => setEditForm({ ...editForm, phones: e.target.value })} 
                 placeholder="เช่น 081-234-5678, 089-876-5432"
+                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">หมายเหตุ</label>
+              <Input 
+                value={editForm.notes} 
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} 
+                placeholder="ข้อมูลเพิ่มเติมเกี่ยวกับบุคคลนี้"
                 className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
             </div>

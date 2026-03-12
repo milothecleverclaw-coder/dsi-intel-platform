@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       aliases, 
       phones, 
       role, 
+      notes,
       distinctive_features, 
       metadata, 
       photos 
@@ -57,8 +58,8 @@ export async function POST(request: Request) {
     const photosJson = typeof photos === 'string' ? photos : JSON.stringify(photos || []);
 
     const { rows } = await pool.query(
-      `INSERT INTO personas (case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliases, phones, role, distinctive_features, metadata, photos) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10::jsonb, $11::jsonb) RETURNING *`,
-      [case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliasesJson, phonesJson, role, distinctive_features, metadataJson, photosJson]
+      `INSERT INTO personas (case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliases, phones, role, notes, distinctive_features, metadata, photos) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12::jsonb) RETURNING *`,
+      [case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliasesJson, phonesJson, role, notes, distinctive_features, metadataJson, photosJson]
     );
 
     return new Response(JSON.stringify(rows[0]), {

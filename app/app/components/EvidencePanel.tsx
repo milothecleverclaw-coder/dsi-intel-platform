@@ -235,14 +235,16 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
                 <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ชื่อแสดง</TableHead>
                 <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ประเภท</TableHead>
                 <TableHead className="text-slate-400 uppercase text-xs tracking-wide">วันที่อัปโหลด</TableHead>
-              </TableRow>\n            </TableHeader>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {evidence.map((e) => (
                 <TableRow 
                   key={e.evidence_id} 
                   className={`border-slate-700/50 hover:bg-slate-800/50 ${(e.file_type === 'document' || e.file_type === 'image') ? 'cursor-pointer' : ''}`}
                   onClick={() => openSavedPreview(e)}
-                >\n                  <TableCell className="flex items-center gap-2 text-slate-50">
+                >
+                  <TableCell className="flex items-center gap-2 text-slate-50">
                     {getFileIcon(e.file_type)}
                     <span className="truncate max-w-[200px]">{e.filename}</span>
                   </TableCell>
@@ -314,7 +316,6 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
                 variant="outline" 
                 className="border-slate-700 text-slate-300 hover:bg-slate-800"
                 onClick={() => {
-                   // Mock download link or logic
                    alert('ดาวน์โหลดไฟล์: ' + selectedEvidence?.filename);
                 }}
               >
@@ -376,7 +377,6 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
 
           {previewResult && (
             <div className="space-y-4">
-              {/* Stats */}
               <div className="flex gap-4 text-sm">
                 <Badge variant="outline" className="border-slate-600 text-slate-300">
                   {previewResult.pages.length} หน้า
@@ -387,31 +387,24 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
                 <Badge variant="outline" className="border-slate-600 text-slate-300">
                   {previewResult.characterCount.toLocaleString()} ตัวอักษร
                 </Badge>
-                {previewResult.tables.length > 0 && (
-                  <Badge variant=\"outline\" className=\"border-yellow-600 text-yellow-400\">
-                    {previewResult.tables.length} ตาราง
-                  </Badge>
-                )}
               </div>
 
-              {/* Extracted Text */}
-              <ScrollArea className=\"h-[400px] border border-slate-700 rounded-lg bg-slate-900/50\">
-                <div className=\"p-4\">
-                  <h4 className=\"text-sm font-semibold text-slate-300 mb-3\">ข้อความที่สกัดได้:</h4>
-                  <div className=\"text-slate-400 whitespace-pre-wrap font-mono text-sm leading-relaxed\">
+              <ScrollArea className="h-[400px] border border-slate-700 rounded-lg bg-slate-900/50">
+                <div className="p-4">
+                  <h4 className="text-sm font-semibold text-slate-300 mb-3">ข้อความที่สกัดได้:</h4>
+                  <div className="text-slate-400 whitespace-pre-wrap font-mono text-sm leading-relaxed">
                     {previewResult.extractedText || 'ไม่พบข้อความในเอกสาร'}
                   </div>
                 </div>
               </ScrollArea>
 
-              {/* Action Buttons */}
-              <div className=\"flex justify-end gap-2 pt-4 border-t border-slate-700\">
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
                 <Button 
-                  variant=\"ghost\" 
+                  variant="ghost" 
                   onClick={() => setPreviewOpen(false)}
-                  className=\"text-slate-400 hover:text-slate-50\"
+                  className="text-slate-400 hover:text-slate-50"
                 >
-                  <X className=\"h-4 w-4 mr-1\" />
+                  <X className="h-4 w-4 mr-1" />
                   ปิด
                 </Button>
                 <Button 
@@ -419,9 +412,9 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
                     setPreviewOpen(false);
                     upload(previewResult.extractedText);
                   }}
-                  className=\"bg-yellow-500 hover:bg-yellow-600 text-white\"
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
                 >
-                  <Upload className=\"h-4 w-4 mr-1\" />
+                  <Upload className="h-4 w-4 mr-1" />
                   บันทึก
                 </Button>
               </div>

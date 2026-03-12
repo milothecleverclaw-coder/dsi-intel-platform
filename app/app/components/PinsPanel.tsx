@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Pin, FileText, Video, Music, ExternalLink } from 'lucide-react';
+import { Pin, FileText, Video, Music, ExternalLink, Edit, Trash2, Loader2, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Pin {
   pin_id: string;
@@ -12,8 +18,16 @@ interface Pin {
   importance: string;
   pin_type: string;
   incident_time: string;
+  incident_date: string;
   pinned_at: string;
   evidence_id: string | null;
+  tagged_personas: string[];
+}
+
+interface Persona {
+  persona_id: string;
+  first_name_th: string;
+  last_name_th: string;
 }
 
 interface Evidence {
@@ -29,30 +43,89 @@ interface PinsPanelProps {
 export function PinsPanel({ caseId }: PinsPanelProps) {
   const [pins, setPins] = useState<Pin[]>([]);
   const [evidenceMap, setEvidenceMap] = useState<Map<string, Evidence>>(new Map());
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  
+  // Edit State
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPin, setEditingPin] = useState<Pin | null>(null);
+  const [editContext, setEditContext] = useState('');
+  const [editIncidentDate, setEditIncidentDate] = useState('');
+  const [editPersonas, setEditPersonas] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      const pRes = await fetch(`/api/pins?caseId=${caseId}`);
+      const pinsData = await pRes.json();
+      setPins(pinsData);
+
+      const evRes = await fetch(`/api/evidence?caseId=${caseId}`);
+      const evidenceData = await evRes.json();
+      const map = new Map<string, Evidence>();
+      evidenceData.forEach((e: Evidence) => map.set(e.evidence_id, e));
+      setEvidenceMap(map);
+
+      const perRes = await fetch(`/api/personas?caseId=${caseId}`);
+      const perData = await perRes.json();
+      setPersonas(perData);
+    } catch (e) {
+      console.error('Failed to fetch pins data:', e);
+    }
+  };
 
   useEffect(() => {
-    // Fetch pins
-    fetch(`/api/pins?caseId=${caseId}`)
-      .then((r) => r.json())
-      .then((pinsData: Pin[]) => {
-        setPins(pinsData);
-        
-        // Fetch evidence details for pins that have evidence_id
-        const evidenceIds = pinsData
-          .filter(p => p.evidence_id)
-          .map(p => p.evidence_id);
-        
-        if (evidenceIds.length > 0) {
-          fetch(`/api/evidence?caseId=${caseId}`)
-            .then(r => r.json())
-            .then((evidenceData: Evidence[]) => {
-              const map = new Map<string, Evidence>();
-              evidenceData.forEach(e => map.set(e.evidence_id, e));
-              setEvidenceMap(map);
-            });
-        }
-      });
+    fetchData();
   }, [caseId]);
+
+  const handleEdit = (pin: Pin) => {
+    setEditingPin(pin);
+    setEditContext(pin.context);
+    setEditIncidentDate(pin.incident_date ? new Date(pin.incident_date).toISOString().split('T')[0] : '');
+    setEditPersonas(pin.tagged_personas || []);
+    setEditDialogOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editingPin) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pins/edit?id=${editingPin.pin_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          context: editContext,
+          incident_date: editIncidentDate || null,
+          tagged_personas: editPersonas,
+        }),
+      });
+      if (res.ok) {
+        setEditDialogOpen(false);
+        fetchData();
+      } else {
+        alert('แก้ไขไม่สำเร็จ');
+      }
+    } catch (e) {
+      alert('แก้ไขไม่สำเร็จ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (pinId: string) => {
+    if (!confirm('ยืนยันการลบหมุดนี้?')) return;
+    try {
+      const res = await fetch(`/api/pins/edit?id=${pinId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        alert('ลบไม่สำเร็จ');
+      }
+    } catch (e) {
+      alert('ลบไม่สำเร็จ');
+    }
+  };
 
   const getImportanceColor = (level: string) => {
     if (level === 'high') return 'bg-red-900/30 text-red-400 border-red-800';
@@ -114,7 +187,8 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">บริบท</TableHead>
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ที่มา</TableHead>
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ความสำคัญ</TableHead>
-              <TableHead className="text-slate-400 uppercase text-xs tracking-wide">วันที่สร้าง</TableHead>
+              <TableHead className="text-slate-400 uppercase text-xs tracking-wide">วันที่เกิดเหตุ</TableHead>
+              <TableHead className="text-slate-400 uppercase text-xs tracking-wide text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -135,13 +209,33 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-slate-400">
-                  {new Date(pin.pinned_at).toLocaleDateString('th-TH')}
+                  {pin.incident_date ? new Date(pin.incident_date).toLocaleDateString('th-TH') : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-yellow-500 hover:bg-yellow-500/10"
+                      onClick={() => handleEdit(pin)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-500/10"
+                      onClick={() => handleDelete(pin.pin_id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
             {pins.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   <Pin className="h-8 w-8 mx-auto mb-2 text-slate-600" />
                   ยังไม่มีหมุดในคดีนี้
                   <p className="text-sm mt-1">ไปที่แท็บ "ค้นหา" เพื่อสร้างหมุดจากผลการค้นหา</p>
@@ -151,6 +245,77 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
           </TableBody>
         </Table>
       </CardContent>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-slate-50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+               <Edit className="h-5 w-5 text-yellow-500" />
+               แก้ไขหมุด {editingPin?.pin_id}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              แก้ไขข้อมูลของหมุดที่เลือก
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-xs text-slate-500 uppercase">บริบท (ข้อความที่เลือก)</Label>
+              <Textarea 
+                value={editContext}
+                onChange={(e) => setEditContext(e.target.value)}
+                className="mt-1 bg-slate-900 border-slate-700 text-slate-50 min-h-[100px]"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-slate-500 uppercase mb-2 block">วันที่เกิดเหตุ</Label>
+              <Input 
+                type="date" 
+                value={editIncidentDate}
+                onChange={(e) => setEditIncidentDate(e.target.value)}
+                className="bg-slate-900 border-slate-700 text-slate-50"
+              />
+            </div>
+
+            <div>
+              <Label className="text-xs text-slate-500 uppercase mb-2 block">บุคคลที่เกี่ยวข้อง</Label>
+              <ScrollArea className="h-[150px] border border-slate-700 rounded bg-slate-900 p-2">
+                <div className="space-y-2">
+                  {personas.map((p) => (
+                    <div 
+                      key={p.persona_id} 
+                      className={`flex items-center space-x-2 p-1 hover:bg-slate-800 rounded transition-colors cursor-pointer ${editPersonas.includes(p.persona_id) ? 'bg-slate-700' : ''}`}
+                      onClick={() => {
+                        if (editPersonas.includes(p.persona_id)) {
+                          setEditPersonas(editPersonas.filter(id => id !== p.persona_id));
+                        } else {
+                          setEditPersonas([...editPersonas, p.persona_id]);
+                        }
+                      }}
+                    >
+                      <div className={`w-4 h-4 rounded border border-slate-600 flex items-center justify-center ${editPersonas.includes(p.persona_id) ? 'bg-yellow-500 border-yellow-500' : ''}`}>
+                        {editPersonas.includes(p.persona_id) && <div className="w-2 h-2 bg-slate-900 rounded-sm" />}
+                      </div>
+                      <span className="text-sm text-slate-300 flex-1">
+                        {p.first_name_th} {p.last_name_th}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditDialogOpen(false)} className="text-slate-400">ยกเลิก</Button>
+            <Button onClick={saveEdit} disabled={saving} className="bg-yellow-500 text-slate-900">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              บันทึกการแก้ไข
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
