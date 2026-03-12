@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Upload, FileText, Video, Image, Music, File, Eye, X, Loader2 } from 'lucide-react';
 
 interface Evidence {
@@ -39,6 +40,7 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
   const [file, setFile] = useState<File | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   
   // Preview states
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -49,7 +51,8 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
   useEffect(() => {
     fetch(`/api/evidence?caseId=${caseId}`)
       .then((r) => r.json())
-      .then(setEvidence);
+      .then(setEvidence)
+      .finally(() => setInitialLoading(false));
   }, [caseId]);
 
   const upload = async () => {
@@ -198,6 +201,18 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {initialLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 py-3">
+                  <Skeleton className="h-4 w-4 bg-slate-700" />
+                  <Skeleton className="h-4 flex-1 bg-slate-700" />
+                  <Skeleton className="h-4 w-20 bg-slate-700" />
+                  <Skeleton className="h-4 w-24 bg-slate-700" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <Table>
             <TableHeader>
               <TableRow className="border-slate-700 hover:bg-transparent">
@@ -235,6 +250,7 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
               )}
             </TableBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 

@@ -34,13 +34,16 @@ interface Case {
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [cases, setCases] = useState<Case[]>([]);
+  const [casesLoading, setCasesLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [activeTab, setActiveTab] = useState<'narrative' | 'evidence' | 'personas' | 'search' | 'pins' | 'chat'>('narrative');
 
   const fetchCases = () => {
+    setCasesLoading(true);
     fetch('/api/cases')
       .then((r) => r.json())
-      .then(setCases);
+      .then(setCases)
+      .finally(() => setCasesLoading(false));
   };
 
   useEffect(() => {
@@ -190,7 +193,7 @@ export default function Home() {
         {/* Content */}
         <main className="flex-1 p-6 overflow-auto">
           {!selectedCase ? (
-            <CasesList cases={cases} onSelect={(c) => { setSelectedCase(c); setActiveTab('narrative'); }} onRefresh={fetchCases} />
+            <CasesList cases={cases} loading={casesLoading} onSelect={(c) => { setSelectedCase(c); setActiveTab('narrative'); }} onRefresh={fetchCases} />
           ) : (
             <div className="max-w-6xl mx-auto">
               {activeTab === 'narrative' && <NarrativePanel caseId={selectedCase.case_id} />}

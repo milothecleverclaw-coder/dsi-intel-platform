@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { UserPlus, Phone, Pencil, Trash2, X, Save, Camera, Plus, Loader2, ScanFace } from 'lucide-react';
 
 interface Persona {
@@ -44,6 +45,7 @@ const roles = [
 
 export function PersonaPanel({ caseId }: PersonaPanelProps) {
   const [personas, setPersonas] = useState<Persona[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [form, setForm] = useState({
     first_name_th: '',
     last_name_th: '',
@@ -82,9 +84,11 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
   }, [caseId]);
 
   const fetchPersonas = () => {
+    setInitialLoading(true);
     fetch(`/api/personas?caseId=${caseId}`)
       .then((r) => r.json())
-      .then(setPersonas);
+      .then(setPersonas)
+      .finally(() => setInitialLoading(false));
   };
 
   const addPersona = async () => {
@@ -396,6 +400,24 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
       </Card>
 
       {/* Persona List */}
+      {initialLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="bg-slate-800 border-slate-700">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-12 w-12 rounded-full bg-slate-700" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-32 bg-slate-700" />
+                    <Skeleton className="h-4 w-24 bg-slate-700" />
+                    <Skeleton className="h-4 w-48 bg-slate-700" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {personas.map((p) => (
           <Card key={p.persona_id} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
@@ -466,6 +488,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
           </div>
         )}
       </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, FolderKanban } from 'lucide-react';
 
 interface Case {
@@ -19,19 +20,20 @@ interface Case {
 
 interface CasesListProps {
   cases: Case[];
+  loading?: boolean;
   onSelect: (c: Case) => void;
   onRefresh: () => void;
 }
 
-export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
+export function CasesList({ cases, loading: casesLoading, onSelect, onRefresh }: CasesListProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [report, setReport] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [creatingCase, setCreatingCase] = useState(false);
 
   const createCase = async () => {
     if (!title) return;
-    setLoading(true);
+    setCreatingCase(true);
     try {
       await fetch('/api/cases', {
         method: 'POST',
@@ -45,7 +47,7 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
     } catch (e) {
       alert('สร้างคดีไม่สำเร็จ');
     } finally {
-      setLoading(false);
+      setCreatingCase(false);
     }
   };
 
@@ -89,10 +91,10 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
               </div>
               <Button 
                 onClick={createCase} 
-                disabled={loading} 
+                disabled={creatingCase} 
                 className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 disabled:opacity-50"
               >
-                {loading ? 'กำลังสร้าง...' : 'สร้างคดี'}
+                {creatingCase ? 'กำลังสร้าง...' : 'สร้างคดี'}
               </Button>
             </div>
           </DialogContent>
@@ -100,34 +102,52 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cases.map((c) => (
-          <Card 
-            key={c.case_id} 
-            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-slate-600 transition-colors"
-            onClick={() => onSelect(c)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start gap-2">
-                <CardTitle className="text-base font-mono text-slate-50">{c.case_number}</CardTitle>
-                <Badge className={c.status === 'active' 
-                  ? 'bg-green-900/30 text-green-400 border border-green-800' 
-                  : 'bg-slate-700 text-slate-400 border border-slate-600'
-                }>
-                  {c.status === 'active' ? 'กำลังดำเนินการ' : c.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="font-medium text-slate-50">{c.title}</p>
-              {c.narrative_report && (
-                <p className="text-sm text-slate-400 mt-2 line-clamp-2">{c.narrative_report}</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {casesLoading ? (
+          // Skeleton cards
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="bg-slate-800 border-slate-700">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <Skeleton className="h-5 w-28 bg-slate-700" />
+                  <Skeleton className="h-5 w-20 bg-slate-700" />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-2">
+                <Skeleton className="h-4 w-full bg-slate-700" />
+                <Skeleton className="h-4 w-3/4 bg-slate-700" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          cases.map((c) => (
+            <Card
+              key={c.case_id}
+              className="bg-slate-800 border-slate-700 cursor-pointer hover:border-slate-600 transition-colors"
+              onClick={() => onSelect(c)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-base font-mono text-slate-50">{c.case_number}</CardTitle>
+                  <Badge className={c.status === 'active'
+                    ? 'bg-green-900/30 text-green-400 border border-green-800'
+                    : 'bg-slate-700 text-slate-400 border border-slate-600'
+                  }>
+                    {c.status === 'active' ? 'กำลังดำเนินการ' : c.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="font-medium text-slate-50">{c.title}</p>
+                {c.narrative_report && (
+                  <p className="text-sm text-slate-400 mt-2 line-clamp-2">{c.narrative_report}</p>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
       
-      {cases.length === 0 && (
+      {!casesLoading && cases.length === 0 && (
         <div className="text-center py-12">
           <FolderKanban className="h-12 w-12 text-slate-600 mx-auto mb-4" />
           <p className="text-slate-400">ยังไม่มีคดีสอบสวน</p>
