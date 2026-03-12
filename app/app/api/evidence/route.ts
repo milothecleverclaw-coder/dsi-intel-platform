@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   const file = formData.get('file') as File;
   const caseId = formData.get('caseId') as string;
   const displayName = formData.get('displayName') as string;
+  const extractedText = formData.get('extractedText') as string;
 
   if (!file || !caseId) {
     return new Response(JSON.stringify({ message: 'file and caseId required' }), { status: 400 });
@@ -39,8 +40,8 @@ export async function POST(request: Request) {
     await blockBlobClient.uploadData(buffer, { blobHTTPHeaders: { blobContentType: file.type } });
 
     const { rows } = await pool.query(
-      'INSERT INTO evidence (case_id, filename, display_name, file_type, blob_path) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [caseId, file.name, displayName || file.name, fileType, blobName]
+      'INSERT INTO evidence (case_id, filename, display_name, file_type, blob_path, extracted_text) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [caseId, file.name, displayName || file.name, fileType, blobName, extractedText || null]
     );
 
     return new Response(JSON.stringify(rows[0]), { status: 201 });

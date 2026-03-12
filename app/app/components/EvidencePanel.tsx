@@ -55,13 +55,16 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
       .finally(() => setInitialLoading(false));
   }, [caseId]);
 
-  const upload = async () => {
+  const upload = async (extractedText?: string) => {
     if (!file) return;
     setLoading(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('caseId', caseId);
     formData.append('displayName', displayName || file.name);
+    if (extractedText) {
+      formData.append('extractedText', extractedText);
+    }
 
     try {
       await fetch('/api/evidence', { method: 'POST', body: formData });
@@ -337,7 +340,7 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
                 <Button 
                   onClick={() => {
                     setPreviewOpen(false);
-                    upload();
+                    upload(previewResult.extractedText);
                   }}
                   className="bg-yellow-500 hover:bg-yellow-600 text-white"
                 >
