@@ -48,7 +48,7 @@ export default function Home() {
     { id: 'evidence' as const, label: 'หลักฐาน', icon: FileText },
     { id: 'personas' as const, label: 'บุคคล', icon: Users },
     { id: 'search' as const, label: 'ค้นหา', icon: Search },
-    { id: 'pins' as const, label: 'Pins', icon: Pin },
+    { id: 'pins' as const, label: 'หมุด', icon: Pin },
     { id: 'chat' as const, label: 'AI วิเคราะห์', icon: Bot },
   ];
 

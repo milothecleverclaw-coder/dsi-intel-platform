@@ -69,12 +69,12 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         }),
       });
       if (res.ok) {
-        alert('สร้าง Pin สำเร็จ');
+        alert('สร้างหมุดสำเร็จ');
       } else {
-        alert('สร้าง Pin ไม่สำเร็จ');
+        alert('สร้างหมุดไม่สำเร็จ');
       }
     } catch (e) {
-      alert('สร้าง Pin ไม่สำเร็จ');
+      alert('สร้างหมุดไม่สำเร็จ');
     }
   };
 
@@ -135,11 +135,11 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
               <p className="font-medium text-slate-50">{result.text}</p>
               <Button 
                 size="sm" 
-                className="mt-3 bg-red-600 hover:bg-red-700 text-white" 
+                className="mt-3 bg-yellow-300 hover:bg-yellow-400 text-slate-900" 
                 onClick={() => createPin('document', result)}
               >
                 <Pin className="h-3 w-3 mr-1" />
-                สร้าง Pin
+                สร้างหมุด
               </Button>
             </CardContent>
           </Card>
@@ -187,11 +187,11 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
               <p className="font-medium text-slate-50">{result.title || result.text || 'พบฉากที่ตรงกับการค้นหา'}</p>
               <Button 
                 size="sm" 
-                className="mt-3 bg-red-600 hover:bg-red-700 text-white" 
+                className="mt-3 bg-yellow-300 hover:bg-yellow-400 text-slate-900" 
                 onClick={() => createPin('video', result)}
               >
                 <Pin className="h-3 w-3 mr-1" />
-                สร้าง Pin
+                สร้างหมุด
               </Button>
             </CardContent>
           </Card>
