@@ -6,11 +6,16 @@ const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER!;
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const caseId = searchParams.get('caseId');
-  if (!caseId) return new Response(JSON.stringify({ message: 'caseId required' }), { status: 400 });
-  const { rows } = await pool.query('SELECT * FROM evidence WHERE case_id = $1 ORDER BY uploaded_at DESC', [caseId]);
-  return new Response(JSON.stringify(rows), { status: 200 });
+  try {
+    const { searchParams } = new URL(request.url);
+    const caseId = searchParams.get('caseId');
+    if (!caseId) return new Response(JSON.stringify({ message: 'caseId required' }), { status: 400 });
+    const { rows } = await pool.query('SELECT * FROM evidence WHERE case_id = $1 ORDER BY uploaded_at DESC', [caseId]);
+    return new Response(JSON.stringify(rows), { status: 200 });
+  } catch (error) {
+    console.error('Evidence fetch error:', error);
+    return new Response(JSON.stringify({ message: 'Fetch failed' }), { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
