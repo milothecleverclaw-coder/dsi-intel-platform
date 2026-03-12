@@ -56,7 +56,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
 
   const createPin = async (type: string, data: any) => {
     try {
-      await fetch('/api/pins', {
+      const res = await fetch('/api/pins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,9 +64,14 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
           pin_type: type,
           context: data.text || data.title || 'พบจากการค้นหา',
           importance: 'medium',
+          evidence_id: data.evidence_id || null,
         }),
       });
-      alert('สร้าง Pin สำเร็จ');
+      if (res.ok) {
+        alert('สร้าง Pin สำเร็จ');
+      } else {
+        alert('สร้าง Pin ไม่สำเร็จ');
+      }
     } catch (e) {
       alert('สร้าง Pin ไม่สำเร็จ');
     }

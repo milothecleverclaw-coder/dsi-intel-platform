@@ -55,8 +55,8 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
           last_name_th: form.last_name_th,
           first_name_en: form.first_name_en,
           last_name_en: form.last_name_en,
-          aliases: form.aliases.split(',').map((s) => s.trim()).filter(Boolean),
-          phones: form.phones.split(',').map((s) => s.trim()).filter(Boolean),
+          aliases: JSON.stringify(form.aliases.split(',').map((s) => s.trim()).filter(Boolean)),
+          phones: JSON.stringify(form.phones.split(',').map((s) => s.trim()).filter(Boolean)),
           role: form.role,
         }),
       });
