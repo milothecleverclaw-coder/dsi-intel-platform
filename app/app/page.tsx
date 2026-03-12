@@ -73,8 +73,8 @@ export default function Home() {
               <h1 className="font-bold text-lg text-slate-50">DSI Intel Platform</h1>
               <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
               <p className="text-[10px] text-slate-600 font-mono">
-              {typeof process.env.NEXT_PUBLIC_APP_VERSION === 'string' ? process.env.NEXT_PUBLIC_APP_VERSION : '0.1.0'
-            </p>
+                {process.env.NEXT_PUBLIC_APP_VERSION || '0.1.0'}
+              </p>
             </div>
           </div>
         </div>
