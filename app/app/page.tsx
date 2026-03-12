@@ -68,7 +68,7 @@ export default function Home() {
             <div>
               <h1 className="font-bold text-lg text-slate-50">DSI Intel Platform</h1>
               <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
-              <p className="text-[10px] text-slate-600 font-mono">6d5fee8</p>
+              <p className="text-[10px] text-slate-600 font-mono">3a5372e</p>
             </div>
           </div>
         </div>
