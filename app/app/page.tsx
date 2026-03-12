@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { CasesList } from './components/CasesList';
+import { NarrativePanel } from './components/NarrativePanel';
 import { EvidencePanel } from './components/EvidencePanel';
 import { PersonaPanel } from './components/PersonaPanel';
 import { SearchPanel } from './components/SearchPanel';
@@ -17,7 +18,8 @@ import {
   Search, 
   Pin, 
   Bot,
-  Shield
+  Shield,
+  BookOpen
 } from 'lucide-react';
 
 interface Case {
@@ -26,13 +28,14 @@ interface Case {
   title: string;
   status: string;
   narrative_report?: string;
+  case_narrative?: string;
 }
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [cases, setCases] = useState<Case[]>([]);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
-  const [activeTab, setActiveTab] = useState<'evidence' | 'personas' | 'search' | 'pins' | 'chat'>('evidence');
+  const [activeTab, setActiveTab] = useState<'narrative' | 'evidence' | 'personas' | 'search' | 'pins' | 'chat'>('narrative');
 
   const fetchCases = () => {
     fetch('/api/cases')
@@ -45,6 +48,7 @@ export default function Home() {
   }, []);
 
   const tabs = [
+    { id: 'narrative' as const, label: 'สำนวนคดี', icon: BookOpen },
     { id: 'evidence' as const, label: 'หลักฐาน', icon: FileText },
     { id: 'personas' as const, label: 'บุคคล', icon: Users },
     { id: 'search' as const, label: 'ค้นหา', icon: Search },
@@ -68,7 +72,7 @@ export default function Home() {
             <div>
               <h1 className="font-bold text-lg text-slate-50">DSI Intel Platform</h1>
               <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
-              <p className="text-[10px] text-slate-600 font-mono">3a5372e</p>
+              <p className="text-[10px] text-slate-600 font-mono">d79f964</p>
             </div>
           </div>
         </div>
@@ -102,7 +106,7 @@ export default function Home() {
                 )}
                 onClick={() => {
                   setSelectedCase(c);
-                  setActiveTab('evidence');
+                  setActiveTab('narrative');
                 }}
               >
                 <div className="truncate">
@@ -184,9 +188,10 @@ export default function Home() {
         {/* Content */}
         <main className="flex-1 p-6 overflow-auto">
           {!selectedCase ? (
-            <CasesList cases={cases} onSelect={(c) => { setSelectedCase(c); setActiveTab('evidence'); }} onRefresh={fetchCases} />
+            <CasesList cases={cases} onSelect={(c) => { setSelectedCase(c); setActiveTab('narrative'); }} onRefresh={fetchCases} />
           ) : (
             <div className="max-w-6xl mx-auto">
+              {activeTab === 'narrative' && <NarrativePanel caseId={selectedCase.case_id} />}
               {activeTab === 'evidence' && <EvidencePanel caseId={selectedCase.case_id} />}
               {activeTab === 'personas' && <PersonaPanel caseId={selectedCase.case_id} />}
               {activeTab === 'search' && <SearchPanel caseId={selectedCase.case_id} />}

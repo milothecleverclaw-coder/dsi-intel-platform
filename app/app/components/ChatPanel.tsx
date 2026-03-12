@@ -18,6 +18,7 @@ interface ChatPanelProps {
   caseData: {
     title: string;
     narrative_report?: string;
+    case_narrative?: string;
   };
 }
 
@@ -52,6 +53,7 @@ export function ChatPanel({ caseId, caseData }: ChatPanelProps) {
         body: JSON.stringify({
           messages: [...messages, userMsg],
           caseContext: caseData.narrative_report || caseData.title,
+          caseNarrative: caseData.case_narrative,
           personas,
           pins,
         }),

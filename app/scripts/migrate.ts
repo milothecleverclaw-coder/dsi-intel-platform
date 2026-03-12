@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS cases (
   case_number VARCHAR(50),
   title VARCHAR(200) NOT NULL,
   narrative_report TEXT,
+  case_narrative TEXT,
   status VARCHAR(20) DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -48,6 +49,15 @@ CREATE TABLE IF NOT EXISTS personas (
   distinctive_features TEXT,
   metadata JSONB DEFAULT '{}',
   photos JSONB DEFAULT '[]',
+  twelve_labs_collection_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS persona_photos (
+  photo_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  persona_id UUID REFERENCES personas(persona_id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  twelve_labs_entity_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

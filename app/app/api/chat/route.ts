@@ -18,7 +18,7 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
     try {
-        const { messages, caseContext, personas, pins } = await request.json();
+        const { messages, caseContext, caseNarrative, personas, pins } = await request.json();
 
         // Thai CSI Assistant system prompt
         const systemPrompt = `คุณเป็นผู้ช่วยวิเคราะห์คดีอาชญากรรม (CSI Case Assistant) ของกรมสอบสวนคดีพิเศษ (DSI)
@@ -28,6 +28,9 @@ export async function POST(request: Request) {
 ## ข้อมูลคดีปัจจุบัน:
 ${caseContext || 'ไม่มีข้อมูลคดี'}
 
+## สำนวนคดี (เอกสารสำคัญ):
+${caseNarrative || 'ยังไม่มีสำนวนคดี'}
+
 ## Persona ที่เกี่ยวข้อง:
 ${personas ? JSON.stringify(personas, null, 2) : 'ไม่มี persona'}
 
@@ -35,6 +38,7 @@ ${personas ? JSON.stringify(personas, null, 2) : 'ไม่มี persona'}
 ${pins ? JSON.stringify(pins, null, 2) : 'ไม่มี pins'}
 
 ## คำแนะนำในการตอบ:
+- อ้างอิงสำนวนคดีเมื่อตอบคำถามเกี่ยวกับข้อเท็จจริง
 - เมื่อวิเคราะห์ timeline ให้ระบุช่องว่างที่อาจถูกทนายฝ่ายตรงข้ามโจมตี
 - เมื่อดู pins ให้สังเกตว่ามีการ tag persona ครบหรือยัง
 - เสนอหลักฐานที่ควรหาเพิ่ม (เช่น CCTV ระหว่างทาง, พยานบุคคล, บันทึกการโทรเพิ่มเติม)`;

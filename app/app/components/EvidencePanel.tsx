@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, Video, Image, Music, File } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Upload, FileText, Video, Image, Music, File, Eye, X, Loader2 } from 'lucide-react';
 
 interface Evidence {
   evidence_id: string;
@@ -21,11 +23,28 @@ interface EvidencePanelProps {
   caseId: string;
 }
 
+interface PreviewResult {
+  success: boolean;
+  filename: string;
+  fileType: string;
+  extractedText: string;
+  pages: any[];
+  tables: any[];
+  wordCount: number;
+  characterCount: number;
+}
+
 export function EvidencePanel({ caseId }: EvidencePanelProps) {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Preview states
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/evidence?caseId=${caseId}`)
@@ -51,6 +70,53 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
       alert('อัปโหลดไม่สำเร็จ');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const previewDocument = async () => {
+    if (!file) return;
+    
+    // Only allow preview for supported document types
+    const isDocument = file.type.includes('pdf') || 
+                      file.type.includes('word') || 
+                      file.type.includes('text') ||
+                      file.type.includes('image') ||
+                      file.name.endsWith('.pdf') ||
+                      file.name.endsWith('.doc') ||
+                      file.name.endsWith('.docx') ||
+                      file.name.endsWith('.txt');
+    
+    if (!isDocument) {
+      setPreviewError('ไฟล์ประเภทนี้ไม่รองรับการแสดงตัวอย่าง (รองรับเฉพาะ PDF, Word, Text, รูปภาพ)');
+      setPreviewOpen(true);
+      return;
+    }
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewResult(null);
+    setPreviewOpen(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/evidence/preview', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Preview failed');
+      }
+
+      setPreviewResult(data);
+    } catch (e: any) {
+      setPreviewError(e.message || 'เกิดข้อผิดพลาดในการแสดงตัวอย่าง');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -97,13 +163,30 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
               className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
             />
           </div>
-          <Button 
-            onClick={upload} 
-            disabled={!file || loading}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50"
-          >
-            {loading ? 'กำลังอัปโหลด...' : 'อัปโหลด'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={upload} 
+              disabled={!file || loading}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50 flex-1"
+            >
+              {loading ? 'กำลังอัปโหลด...' : 'อัปโหลด'}
+            </Button>
+            <Button 
+              onClick={previewDocument}
+              disabled={!file || previewLoading}
+              variant="outline"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-slate-50"
+            >
+              {previewLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 mr-1" />
+                  ตัวอย่างผลลัพธ์
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -154,6 +237,102 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-800 border-slate-700 text-slate-50">
+          <DialogHeader>
+            <DialogTitle className="text-slate-50 flex items-center gap-2">
+              <Eye className="h-5 w-5 text-yellow-500" />
+              ตัวอย่างผลลัพธ์
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {previewResult?.filename || 'กำลังโหลด...'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mb-4" />
+              <p className="text-slate-400">กำลังวิเคราะห์เอกสาร...</p>
+            </div>
+          )}
+
+          {previewError && (
+            <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
+              <p className="text-red-400">{previewError}</p>
+            </div>
+          )}
+
+          {previewResult && (
+            <div className="space-y-4">
+              {/* Stats */}
+              <div className="flex gap-4 text-sm">
+                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                  {previewResult.pages.length} หน้า
+                </Badge>
+                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                  {previewResult.wordCount.toLocaleString()} คำ
+                </Badge>
+                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                  {previewResult.characterCount.toLocaleString()} ตัวอักษร
+                </Badge>
+                {previewResult.tables.length > 0 && (
+                  <Badge variant="outline" className="border-yellow-600 text-yellow-400">
+                    {previewResult.tables.length} ตาราง
+                  </Badge>
+                )}
+              </div>
+
+              {/* Extracted Text */}
+              <ScrollArea className="h-[400px] border border-slate-700 rounded-lg bg-slate-900/50">
+                <div className="p-4">
+                  <h4 className="text-sm font-semibold text-slate-300 mb-3">ข้อความที่สกัดได้:</h4>
+                  <div className="text-slate-400 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                    {previewResult.extractedText || 'ไม่พบข้อความในเอกสาร'}
+                  </div>
+                </div>
+              </ScrollArea>
+
+              {/* Tables */}
+              {previewResult.tables.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-300">ตารางที่พบ:</h4>
+                  {previewResult.tables.map((table, idx) => (
+                    <div key={idx} className="p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+                      <p className="text-xs text-slate-500 mb-2">
+                        ตาราง {idx + 1}: {table.rowCount} แถว × {table.columnCount} คอลัมน์
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setPreviewOpen(false)}
+                  className="text-slate-400 hover:text-slate-50"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  ปิด
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setPreviewOpen(false);
+                    upload();
+                  }}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  บันทึก
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
