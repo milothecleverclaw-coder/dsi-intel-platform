@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS cases (
     case_number VARCHAR(50),
     title VARCHAR(200) NOT NULL,
     narrative_report TEXT,
+    case_narrative TEXT,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS evidence (
     display_name VARCHAR(200),
     file_type VARCHAR(20),
     blob_path TEXT,
+    extracted_text TEXT,
     metadata JSONB DEFAULT '{}',
     azure_analysis JSONB,
     twelve_labs_index_id TEXT,
