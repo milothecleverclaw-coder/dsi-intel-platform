@@ -12,7 +12,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { rows } = await pool.query('SELECT * FROM personas WHERE case_id = $1', [caseId]);
+    // Use DISTINCT ON to prevent duplicates
+    const { rows } = await pool.query(
+      'SELECT DISTINCT ON (persona_id) * FROM personas WHERE case_id = $1 ORDER BY persona_id, created_at DESC',
+      [caseId]
+    );
     return new Response(JSON.stringify(rows), { status: 200 });
   } catch (error) {
     console.error('Error fetching personas:', error);
