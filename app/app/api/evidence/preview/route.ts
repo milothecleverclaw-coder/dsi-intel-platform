@@ -1,26 +1,21 @@
 import { DocumentAnalysisClient, AzureKeyCredential } from "@azure/ai-form-recognizer";
 import { BlobServiceClient } from '@azure/storage-blob';
 
-const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT || '';
-const AZURE_DI_API_KEY = process.env.AZURE_DI_API_KEY || '';
-const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
-const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER || '';
-
-let credential: AzureKeyCredential;
-let diClient: DocumentAnalysisClient;
-let blobServiceClient: BlobServiceClient;
-
-if (AZURE_DI_API_KEY && AZURE_DI_ENDPOINT) {
-    credential = new AzureKeyCredential(AZURE_DI_API_KEY);
-    diClient = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, credential);
-}
-
-if (AZURE_STORAGE_CONNECTION_STRING) {
-    blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
-}
-
 export async function POST(request: Request) {
     try {
+        const endpoint = process.env.AZURE_DI_ENDPOINT;
+        const apiKey = process.env.AZURE_DI_API_KEY;
+        const connString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+        const container = process.env.AZURE_STORAGE_CONTAINER;
+
+        if (!endpoint || !apiKey || !connString || !container) {
+             return new Response(JSON.stringify({ message: 'Server configuration missing' }), { status: 500 });
+        }
+
+        const credential = new AzureKeyCredential(apiKey);
+        const diClient = new DocumentAnalysisClient(endpoint, credential);
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connString);
+
         const formData = await request.formData();
         const file = formData.get('file') as File;
 
@@ -45,7 +40,7 @@ export async function POST(request: Request) {
         }
 
         // Upload to temporary blob for analysis
-        const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER);
+        const containerClient = blobServiceClient.getContainerClient(container);
         const tempBlobName = `temp/${Date.now()}-${file.name}`;
         const blockBlobClient = containerClient.getBlockBlobClient(tempBlobName);
         

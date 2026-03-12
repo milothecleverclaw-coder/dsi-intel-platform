@@ -1,17 +1,18 @@
 import { DocumentAnalysisClient, AzureKeyCredential } from "@azure/ai-form-recognizer";
 import pool from '@/lib/db';
 
-const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT || '';
-const AZURE_DI_API_KEY = process.env.AZURE_DI_API_KEY || '';
-
-let client: DocumentAnalysisClient;
-if (AZURE_DI_ENDPOINT && AZURE_DI_API_KEY) {
-    const credential = new AzureKeyCredential(AZURE_DI_API_KEY);
-    client = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, credential);
-}
-
 export async function POST(request: Request) {
     const { case_id, file_url } = await request.json();
+
+    const endpoint = process.env.AZURE_DI_ENDPOINT;
+    const apiKey = process.env.AZURE_DI_API_KEY;
+
+    if (!endpoint || !apiKey) {
+         return new Response(JSON.stringify({ message: 'Server configuration missing' }), { status: 500 });
+    }
+
+    const credential = new AzureKeyCredential(apiKey);
+    const client = new DocumentAnalysisClient(endpoint, credential);
 
     if (!case_id || !file_url) {
         return new Response(JSON.stringify({ message: 'case_id and file_url are required' }), {
