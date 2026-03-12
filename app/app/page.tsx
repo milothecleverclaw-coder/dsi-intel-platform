@@ -64,10 +64,11 @@ export default function Home() {
         {/* Header */}
         <div className="p-4 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-red-600" />
+            <Shield className="h-6 w-6 text-yellow-300" />
             <div>
               <h1 className="font-bold text-lg text-slate-50">DSI Intel Platform</h1>
               <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
+              <p className="text-[10px] text-slate-600 font-mono">6d5fee8</p>
             </div>
           </div>
         </div>
