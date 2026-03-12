@@ -46,9 +46,15 @@ export async function POST(request: Request) {
       });
     }
 
+    // Handle both pre-stringified JSON and regular arrays/objects
+    const aliasesJson = typeof aliases === 'string' ? aliases : JSON.stringify(aliases || []);
+    const phonesJson = typeof phones === 'string' ? phones : JSON.stringify(phones || []);
+    const metadataJson = typeof metadata === 'string' ? metadata : JSON.stringify(metadata || {});
+    const photosJson = typeof photos === 'string' ? photos : JSON.stringify(photos || []);
+
     const { rows } = await pool.query(
-      `INSERT INTO personas (case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliases, phones, role, distinctive_features, metadata, photos) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliases, phones, role, distinctive_features, metadata, photos]
+      `INSERT INTO personas (case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliases, phones, role, distinctive_features, metadata, photos) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, $10::jsonb, $11::jsonb) RETURNING *`,
+      [case_id, first_name_th, last_name_th, first_name_en, last_name_en, aliasesJson, phonesJson, role, distinctive_features, metadataJson, photosJson]
     );
 
     return new Response(JSON.stringify(rows[0]), {
