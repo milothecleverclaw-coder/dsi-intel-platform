@@ -1,6 +1,6 @@
 {
   "name": "app",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,7 +11,8 @@
     "pm2:reload": "pm2 reload ecosystem.config.js --update-env",
     "pm2:stop": "pm2 stop dsi-platform",
     "pm2:delete": "pm2 delete dsi-platform",
-    "test": "npx vitest run"
+    "test": "npx vitest run",
+    "prepare": "husky"
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
@@ -50,6 +51,7 @@
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "node-fetch": "^3.3.2",
     "node-mocks-http": "^1.17.2",
