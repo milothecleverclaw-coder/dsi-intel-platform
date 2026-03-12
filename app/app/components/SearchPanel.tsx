@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Search, FileText, Video, Pin } from 'lucide-react';
 
 interface SearchPanelProps {
   caseId: string;
@@ -78,26 +79,46 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   };
 
   return (
-    <Tabs defaultValue="docs" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="docs">ค้นหาในเอกสาร</TabsTrigger>
-        <TabsTrigger value="videos">ค้นหาในวิดีโอ</TabsTrigger>
+    <Tabs defaultValue="docs" className="space-y-6">
+      <TabsList className="bg-slate-800 border border-slate-700">
+        <TabsTrigger 
+          value="docs" 
+          className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-slate-400"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          ค้นหาในเอกสาร
+        </TabsTrigger>
+        <TabsTrigger 
+          value="videos"
+          className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-slate-400"
+        >
+          <Video className="h-4 w-4 mr-2" />
+          ค้นหาในวิดีโอ
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="docs" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>ค้นหาในเอกสาร</CardTitle>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-slate-50 flex items-center gap-2">
+              <Search className="h-5 w-5 text-red-600" />
+              ค้นหาในเอกสาร
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex gap-2">
               <Input
                 value={docQuery}
                 onChange={(e) => setDocQuery(e.target.value)}
                 placeholder="เช่น โอนเงิน, สัญญา, ใบเสร็จ..."
                 onKeyDown={(e) => e.key === 'Enter' && searchDocs()}
+                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
               />
-              <Button onClick={searchDocs} disabled={loading}>
+              <Button 
+                onClick={searchDocs} 
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
                 {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
               </Button>
             </div>
@@ -105,12 +126,20 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         </Card>
 
         {docResults.map((result, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
             <CardContent className="pt-6">
-              <p className="text-sm text-gray-600 mb-2">จาก: {result.filename}</p>
-              <p className="font-medium">{result.text}</p>
-              <Button size="sm" variant="outline" className="mt-2" onClick={() => createPin('document', result)}>
-                📌 สร้าง Pin
+              <p className="text-sm text-slate-500 mb-2 flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                จาก: {result.filename}
+              </p>
+              <p className="font-medium text-slate-50">{result.text}</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-red-600 hover:bg-red-700 text-white" 
+                onClick={() => createPin('document', result)}
+              >
+                <Pin className="h-3 w-3 mr-1" />
+                สร้าง Pin
               </Button>
             </CardContent>
           </Card>
@@ -118,19 +147,27 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
       </TabsContent>
 
       <TabsContent value="videos" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>ค้นหาในวิดีโอ</CardTitle>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base text-slate-50 flex items-center gap-2">
+              <Search className="h-5 w-5 text-red-600" />
+              ค้นหาในวิดีโอ
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex gap-2">
               <Input
                 value={videoQuery}
                 onChange={(e) => setVideoQuery(e.target.value)}
                 placeholder="เช่น คนสองคนนั่งโต๊ะ, ส่งซอง..."
                 onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
+                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
               />
-              <Button onClick={searchVideos} disabled={loading}>
+              <Button 
+                onClick={searchVideos} 
+                disabled={loading}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
                 {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
               </Button>
             </div>
@@ -138,15 +175,23 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         </Card>
 
         {videoResults.map((result, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-2">
-                <Badge>วิดีโอ</Badge>
-                <span className="text-sm text-gray-600">{result.start}s - {result.end}s</span>
+                <Badge className="bg-purple-900/30 text-purple-400 border border-purple-800">
+                  <Video className="h-3 w-3 mr-1" />
+                  วิดีโอ
+                </Badge>
+                <span className="text-sm text-slate-400">{result.start}s - {result.end}s</span>
               </div>
-              <p className="font-medium">{result.title || result.text || 'พบฉากที่ตรงกับการค้นหา'}</p>
-              <Button size="sm" variant="outline" className="mt-2" onClick={() => createPin('video', result)}>
-                📌 สร้าง Pin
+              <p className="font-medium text-slate-50">{result.title || result.text || 'พบฉากที่ตรงกับการค้นหา'}</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-red-600 hover:bg-red-700 text-white" 
+                onClick={() => createPin('video', result)}
+              >
+                <Pin className="h-3 w-3 mr-1" />
+                สร้าง Pin
               </Button>
             </CardContent>
           </Card>

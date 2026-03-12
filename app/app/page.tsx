@@ -9,6 +9,16 @@ import { SearchPanel } from './components/SearchPanel';
 import { PinsPanel } from './components/PinsPanel';
 import { ChatPanel } from './components/ChatPanel';
 import { cn } from '@/lib/utils';
+import { 
+  PanelLeft, 
+  FolderOpen, 
+  FileText, 
+  Users, 
+  Search, 
+  Pin, 
+  Bot,
+  Shield
+} from 'lucide-react';
 
 interface Case {
   case_id: string;
@@ -35,50 +45,67 @@ export default function Home() {
   }, []);
 
   const tabs = [
-    { id: 'evidence' as const, label: '📄 หลักฐาน' },
-    { id: 'personas' as const, label: '👤 บุคคล' },
-    { id: 'search' as const, label: '🔍 ค้นหา' },
-    { id: 'pins' as const, label: '📌 Pins' },
-    { id: 'chat' as const, label: '🤖 AI' },
+    { id: 'evidence' as const, label: 'หลักฐาน', icon: FileText },
+    { id: 'personas' as const, label: 'บุคคล', icon: Users },
+    { id: 'search' as const, label: 'ค้นหา', icon: Search },
+    { id: 'pins' as const, label: 'Pins', icon: Pin },
+    { id: 'chat' as const, label: 'AI วิเคราะห์', icon: Bot },
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-900 text-slate-50">
       {/* Sidebar */}
       <aside
         className={cn(
-          'bg-slate-900 text-white transition-all duration-300 flex flex-col',
-          sidebarOpen ? 'w-64' : 'w-0 overflow-hidden'
+          'bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col',
+          sidebarOpen ? 'w-[280px]' : 'w-0 overflow-hidden'
         )}
       >
-        <div className="p-4 border-b border-slate-700">
-          <h1 className="font-bold text-lg">DSI Intel Platform</h1>
-          <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
+        {/* Header */}
+        <div className="p-4 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-red-600" />
+            <div>
+              <h1 className="font-bold text-lg text-slate-50">DSI Intel Platform</h1>
+              <p className="text-xs text-slate-400">ระบบวิเคราะห์คดีสอบสวน</p>
+            </div>
+          </div>
         </div>
 
         {/* Cases Section */}
         <div className="p-4 flex-1 overflow-auto">
-          <h2 className="text-sm font-semibold text-slate-400 mb-2">คดีสอบสวน</h2>
+          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">คดีสอบสวน</h2>
           <Button
-            variant={selectedCase === null ? 'secondary' : 'ghost'}
-            className="w-full justify-start text-left mb-1"
+            variant={selectedCase === null ? 'default' : 'ghost'}
+            className={cn(
+              "w-full justify-start text-left mb-1",
+              selectedCase === null 
+                ? "bg-red-600 hover:bg-red-700 text-white" 
+                : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
+            )}
             onClick={() => setSelectedCase(null)}
           >
-            📁 ทั้งหมด
+            <FolderOpen className="h-4 w-4 mr-2" />
+            ทั้งหมด
           </Button>
-          <div className="space-y-1">
+          <div className="space-y-1 mt-2">
             {cases.map((c) => (
               <Button
                 key={c.case_id}
-                variant={selectedCase?.case_id === c.case_id ? 'secondary' : 'ghost'}
-                className="w-full justify-start text-left text-sm h-auto py-2"
+                variant={selectedCase?.case_id === c.case_id ? 'default' : 'ghost'}
+                className={cn(
+                  "w-full justify-start text-left text-sm h-auto py-2",
+                  selectedCase?.case_id === c.case_id 
+                    ? "bg-red-600 hover:bg-red-700 text-white" 
+                    : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
+                )}
                 onClick={() => {
                   setSelectedCase(c);
                   setActiveTab('evidence');
                 }}
               >
                 <div className="truncate">
-                  <div className="truncate">{c.case_number}</div>
+                  <div className="truncate font-medium">{c.case_number}</div>
                   <div className="text-xs text-slate-400 truncate">{c.title}</div>
                 </div>
               </Button>
@@ -88,37 +115,67 @@ export default function Home() {
 
         {/* Case Tabs (only when case selected) */}
         {selectedCase && (
-          <div className="p-4 border-t border-slate-700">
-            <h2 className="text-sm font-semibold text-slate-400 mb-2">รายละเอียดคดี</h2>
+          <div className="p-4 border-t border-slate-800">
+            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">รายละเอียดคดี</h2>
             <div className="space-y-1">
-              {tabs.map((tab) => (
-                <Button
-                  key={tab.id}
-                  variant={activeTab === tab.id ? 'secondary' : 'ghost'}
-                  className="w-full justify-start text-left text-sm"
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </Button>
-              ))}
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <Button
+                    key={tab.id}
+                    variant={activeTab === tab.id ? 'default' : 'ghost'}
+                    className={cn(
+                      "w-full justify-start text-left text-sm",
+                      activeTab === tab.id 
+                        ? "bg-red-600 hover:bg-red-700 text-white" 
+                        : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
+                    )}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {tab.label}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         )}
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-950">
         {/* Header */}
-        <header className="bg-white border-b p-4 flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            ☰
+        <header className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-slate-400 hover:text-slate-50 hover:bg-slate-800"
+          >
+            <PanelLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h2 className="font-semibold">
-              {selectedCase ? `${selectedCase.case_number}: ${selectedCase.title}` : 'คดีสอบสวน'}
-            </h2>
+          <div className="flex-1 min-w-0">
+            {selectedCase ? (
+              <div className="flex items-center gap-3">
+                <h2 className="font-semibold text-slate-50">
+                  {selectedCase.case_number}
+                </h2>
+                <span className="text-slate-500">|</span>
+                <span className="text-slate-300">{selectedCase.title}</span>
+                <span className={cn(
+                  "px-2 py-0.5 text-xs rounded-full",
+                  selectedCase.status === 'active' 
+                    ? "bg-green-900/30 text-green-400 border border-green-800" 
+                    : "bg-slate-700 text-slate-400 border border-slate-600"
+                )}>
+                  {selectedCase.status === 'active' ? 'กำลังดำเนินการ' : selectedCase.status}
+                </span>
+              </div>
+            ) : (
+              <h2 className="font-semibold text-slate-50">คดีสอบสวน</h2>
+            )}
             {selectedCase?.narrative_report && (
-              <p className="text-sm text-gray-500 truncate max-w-2xl">{selectedCase.narrative_report}</p>
+              <p className="text-sm text-slate-500 truncate max-w-4xl">{selectedCase.narrative_report}</p>
             )}
           </div>
         </header>

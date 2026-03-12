@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Plus, FolderKanban } from 'lucide-react';
 
 interface Case {
   case_id: string;
@@ -49,27 +50,48 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">คดีสอบสวนทั้งหมด</h2>
+        <div className="flex items-center gap-3">
+          <FolderKanban className="h-6 w-6 text-red-600" />
+          <h2 className="text-xl font-bold text-slate-50">คดีสอบสวนทั้งหมด</h2>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>+ สร้างคดีใหม่</Button>
+            <Button className="bg-red-600 hover:bg-red-700 text-white">
+              <Plus className="h-4 w-4 mr-1" />
+              สร้างคดีใหม่
+            </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-slate-800 border-slate-700 text-slate-50">
             <DialogHeader>
-              <DialogTitle>สร้างคดีใหม่</DialogTitle>
+              <DialogTitle className="text-slate-50">สร้างคดีใหม่</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <label className="text-sm font-medium">ชื่อคดี</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="เช่น คดีฉ้อโกง Icon Group" />
+                <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">ชื่อคดี</label>
+                <Input 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder="เช่น คดีฉ้อโกง Icon Group"
+                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                />
               </div>
               <div>
-                <label className="text-sm font-medium">รายงานสรุปคดี</label>
-                <Textarea value={report} onChange={(e) => setReport(e.target.value)} placeholder="รายละเอียดคดี..." rows={4} />
+                <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">รายงานสรุปคดี</label>
+                <Textarea 
+                  value={report} 
+                  onChange={(e) => setReport(e.target.value)} 
+                  placeholder="รายละเอียดคดี..." 
+                  rows={4}
+                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20 resize-none"
+                />
               </div>
-              <Button onClick={createCase} disabled={loading} className="w-full">
+              <Button 
+                onClick={createCase} 
+                disabled={loading} 
+                className="w-full bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+              >
                 {loading ? 'กำลังสร้าง...' : 'สร้างคดี'}
               </Button>
             </div>
@@ -79,24 +101,39 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cases.map((c) => (
-          <Card key={c.case_id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onSelect(c)}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{c.case_number}</CardTitle>
-                <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>
+          <Card 
+            key={c.case_id} 
+            className="bg-slate-800 border-slate-700 cursor-pointer hover:border-slate-600 transition-colors"
+            onClick={() => onSelect(c)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start gap-2">
+                <CardTitle className="text-base font-mono text-slate-50">{c.case_number}</CardTitle>
+                <Badge className={c.status === 'active' 
+                  ? 'bg-green-900/30 text-green-400 border border-green-800' 
+                  : 'bg-slate-700 text-slate-400 border border-slate-600'
+                }>
                   {c.status === 'active' ? 'กำลังดำเนินการ' : c.status}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="font-medium">{c.title}</p>
+            <CardContent className="pt-0">
+              <p className="font-medium text-slate-50">{c.title}</p>
               {c.narrative_report && (
-                <p className="text-sm text-gray-500 mt-2 line-clamp-2">{c.narrative_report}</p>
+                <p className="text-sm text-slate-400 mt-2 line-clamp-2">{c.narrative_report}</p>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
+      
+      {cases.length === 0 && (
+        <div className="text-center py-12">
+          <FolderKanban className="h-12 w-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400">ยังไม่มีคดีสอบสวน</p>
+          <p className="text-sm text-slate-500">คลิก "สร้างคดีใหม่" เพื่อเริ่มต้น</p>
+        </div>
+      )}
     </div>
   );
 }
