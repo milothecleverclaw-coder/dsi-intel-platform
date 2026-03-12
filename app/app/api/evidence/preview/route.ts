@@ -1,16 +1,17 @@
-import { DocumentAnalysisClient, AzureKeyCredential } from "@azure/ai-form-recognizer";
+import { DocumentAnalysisClient } from "@azure/ai-form-recognizer";
+import { DefaultAzureCredential } from "@azure/identity";
 import { BlobServiceClient } from '@azure/storage-blob';
 
 const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
-const AZURE_API_KEY = process.env.AZURE_CLIENT_SECRET;
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING!;
 const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER!;
 
-if (!AZURE_DI_ENDPOINT || !AZURE_API_KEY) {
-    throw new Error('Azure Document Intelligence credentials missing.');
+if (!AZURE_DI_ENDPOINT) {
+    throw new Error('Azure Document Intelligence endpoint missing.');
 }
 
-const diClient = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, new AzureKeyCredential(AZURE_API_KEY));
+const credential = new DefaultAzureCredential();
+const diClient = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, credential);
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 
 export async function POST(request: Request) {

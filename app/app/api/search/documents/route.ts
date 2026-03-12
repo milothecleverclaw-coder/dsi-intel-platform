@@ -1,14 +1,15 @@
-import { DocumentAnalysisClient, AzureKeyCredential } from "@azure/ai-form-recognizer";
+import { DocumentAnalysisClient } from "@azure/ai-form-recognizer";
+import { DefaultAzureCredential } from "@azure/identity";
 import pool from '@/lib/db';
 
 const AZURE_DI_ENDPOINT = process.env.AZURE_DI_ENDPOINT;
-const AZURE_API_KEY = process.env.AZURE_CLIENT_SECRET; // Assuming AZURE_CLIENT_SECRET is used as the API key
 
-if (!AZURE_DI_ENDPOINT || !AZURE_API_KEY) {
-    throw new Error('Azure Document Intelligence credentials missing.');
+if (!AZURE_DI_ENDPOINT) {
+    throw new Error('Azure Document Intelligence endpoint missing.');
 }
 
-const client = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, new AzureKeyCredential(AZURE_API_KEY));
+const credential = new DefaultAzureCredential();
+const client = new DocumentAnalysisClient(AZURE_DI_ENDPOINT, credential);
 
 export async function POST(request: Request) {
     const { case_id, file_url } = await request.json();

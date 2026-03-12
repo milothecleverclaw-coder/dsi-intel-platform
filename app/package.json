@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
+    "@azure/identity": "^4.13.0",
     "@azure/storage-blob": "^12.31.0",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -27,6 +28,7 @@
     "next": "16.1.6",
     "openai": "^6.27.0",
     "pg": "^8.20.0",
+    "pm2": "^6.0.14",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.5.0"
