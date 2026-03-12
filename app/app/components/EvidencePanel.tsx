@@ -75,7 +75,7 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader className="pb-3">
           <CardTitle className="text-base text-slate-50 flex items-center gap-2">
-            <Upload className="h-5 w-5 text-red-600" />
+            <Upload className="h-5 w-5 text-yellow-500" />
             อัปโหลดหลักฐานใหม่
           </CardTitle>
         </CardHeader>
@@ -94,13 +94,13 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
               value={displayName} 
               onChange={(e) => setDisplayName(e.target.value)} 
               placeholder={file?.name || 'ชื่อที่ต้องการแสดง'}
-              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
             />
           </div>
           <Button 
             onClick={upload} 
             disabled={!file || loading}
-            className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            className="bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50"
           >
             {loading ? 'กำลังอัปโหลด...' : 'อัปโหลด'}
           </Button>

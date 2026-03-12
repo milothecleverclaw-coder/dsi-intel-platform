@@ -53,12 +53,12 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <FolderKanban className="h-6 w-6 text-red-600" />
+          <FolderKanban className="h-6 w-6 text-yellow-500" />
           <h2 className="text-xl font-bold text-slate-50">คดีสอบสวนทั้งหมด</h2>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-red-600 hover:bg-red-700 text-white">
+            <Button className="bg-yellow-500 hover:bg-yellow-600 text-slate-900">
               <Plus className="h-4 w-4 mr-1" />
               สร้างคดีใหม่
             </Button>
@@ -74,7 +74,7 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)} 
                   placeholder="เช่น คดีฉ้อโกง Icon Group"
-                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
                 />
               </div>
               <div>
@@ -84,13 +84,13 @@ export function CasesList({ cases, onSelect, onRefresh }: CasesListProps) {
                   onChange={(e) => setReport(e.target.value)} 
                   placeholder="รายละเอียดคดี..." 
                   rows={4}
-                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20 resize-none"
+                  className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20 resize-none"
                 />
               </div>
               <Button 
                 onClick={createCase} 
                 disabled={loading} 
-                className="w-full bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 disabled:opacity-50"
               >
                 {loading ? 'กำลังสร้าง...' : 'สร้างคดี'}
               </Button>

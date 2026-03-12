@@ -117,7 +117,7 @@ export function ChatPanel({ caseId, caseData }: ChatPanelProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="ถามคำถามเกี่ยวกับคดี..."
-            className="flex-1 min-h-[80px] bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20 resize-none"
+            className="flex-1 min-h-[80px] bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20 resize-none"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -128,7 +128,7 @@ export function ChatPanel({ caseId, caseData }: ChatPanelProps) {
           <Button 
             onClick={sendMessage} 
             disabled={loading} 
-            className="self-end bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 h-10"
+            className="self-end bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50 h-10"
           >
             <Send className="h-4 w-4" />
           </Button>

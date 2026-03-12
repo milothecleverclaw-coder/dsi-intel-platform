@@ -83,14 +83,14 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
       <TabsList className="bg-slate-800 border border-slate-700">
         <TabsTrigger 
           value="docs" 
-          className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-slate-400"
+          className="data-[state=active]:bg-yellow-500 data-[state=active]:text-slate-900 text-slate-400"
         >
           <FileText className="h-4 w-4 mr-2" />
           ค้นหาในเอกสาร
         </TabsTrigger>
         <TabsTrigger 
           value="videos"
-          className="data-[state=active]:bg-red-600 data-[state=active]:text-white text-slate-400"
+          className="data-[state=active]:bg-yellow-500 data-[state=active]:text-slate-900 text-slate-400"
         >
           <Video className="h-4 w-4 mr-2" />
           ค้นหาในวิดีโอ
@@ -101,7 +101,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-base text-slate-50 flex items-center gap-2">
-              <Search className="h-5 w-5 text-red-600" />
+              <Search className="h-5 w-5 text-yellow-500" />
               ค้นหาในเอกสาร
             </CardTitle>
           </CardHeader>
@@ -112,12 +112,12 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
                 onChange={(e) => setDocQuery(e.target.value)}
                 placeholder="เช่น โอนเงิน, สัญญา, ใบเสร็จ..."
                 onKeyDown={(e) => e.key === 'Enter' && searchDocs()}
-                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
               <Button 
                 onClick={searchDocs} 
                 disabled={loading}
-                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50"
               >
                 {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
               </Button>
@@ -150,7 +150,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader className="pb-3">
             <CardTitle className="text-base text-slate-50 flex items-center gap-2">
-              <Search className="h-5 w-5 text-red-600" />
+              <Search className="h-5 w-5 text-yellow-500" />
               ค้นหาในวิดีโอ
             </CardTitle>
           </CardHeader>
@@ -161,12 +161,12 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
                 onChange={(e) => setVideoQuery(e.target.value)}
                 placeholder="เช่น คนสองคนนั่งโต๊ะ, ส่งซอง..."
                 onKeyDown={(e) => e.key === 'Enter' && searchVideos()}
-                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="flex-1 bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
               <Button 
                 onClick={searchVideos} 
                 disabled={loading}
-                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50"
               >
                 {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
               </Button>

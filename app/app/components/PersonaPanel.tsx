@@ -94,7 +94,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader className="pb-3">
           <CardTitle className="text-base text-slate-50 flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-red-600" />
+            <UserPlus className="h-5 w-5 text-yellow-500" />
             เพิ่มบุคคลที่เกี่ยวข้อง
           </CardTitle>
         </CardHeader>
@@ -106,7 +106,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                 value={form.first_name_th} 
                 onChange={(e) => setForm({ ...form, first_name_th: e.target.value })} 
                 placeholder="เช่น สมชาย"
-                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
             </div>
             <div>
@@ -115,7 +115,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                 value={form.last_name_th} 
                 onChange={(e) => setForm({ ...form, last_name_th: e.target.value })} 
                 placeholder="เช่น ใจดี"
-                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
             </div>
             <div>
@@ -124,7 +124,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                 value={form.first_name_en} 
                 onChange={(e) => setForm({ ...form, first_name_en: e.target.value })} 
                 placeholder="เช่น Somchai"
-                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
             </div>
             <div>
@@ -133,7 +133,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
                 value={form.last_name_en} 
                 onChange={(e) => setForm({ ...form, last_name_en: e.target.value })} 
                 placeholder="เช่น Jaidee"
-                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+                className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
               />
             </div>
           </div>
@@ -143,7 +143,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
               value={form.aliases} 
               onChange={(e) => setForm({ ...form, aliases: e.target.value })} 
               placeholder="เช่น พี่ชาย, เจ้าของร้าน"
-              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
             />
           </div>
           <div>
@@ -152,13 +152,13 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
               value={form.phones} 
               onChange={(e) => setForm({ ...form, phones: e.target.value })} 
               placeholder="เช่น 081-234-5678, 089-876-5432"
-              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-red-600 focus:ring-red-600/20"
+              className="bg-slate-900 border-slate-700 text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
             />
           </div>
           <div>
             <label className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2 block">บทบาท</label>
             <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-              <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-50 focus:ring-red-600/20">
+              <SelectTrigger className="bg-slate-900 border-slate-700 text-slate-50 focus:ring-yellow-500/20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700">
@@ -172,7 +172,7 @@ export function PersonaPanel({ caseId }: PersonaPanelProps) {
           <Button 
             onClick={addPersona} 
             disabled={loading} 
-            className="w-full bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white disabled:opacity-50"
           >
             {loading ? 'กำลังเพิ่ม...' : 'เพิ่มบุคคล'}
           </Button>

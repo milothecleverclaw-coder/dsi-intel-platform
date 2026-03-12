@@ -81,7 +81,7 @@ export default function Home() {
             className={cn(
               "w-full justify-start text-left mb-1",
               selectedCase === null 
-                ? "bg-red-600 hover:bg-red-700 text-white" 
+                ? "bg-yellow-500 hover:bg-yellow-600 text-slate-900" 
                 : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
             )}
             onClick={() => setSelectedCase(null)}
@@ -97,7 +97,7 @@ export default function Home() {
                 className={cn(
                   "w-full justify-start text-left text-sm h-auto py-2",
                   selectedCase?.case_id === c.case_id 
-                    ? "bg-red-600 hover:bg-red-700 text-white" 
+                    ? "bg-yellow-500 hover:bg-yellow-600 text-slate-900" 
                     : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
                 )}
                 onClick={() => {
@@ -128,7 +128,7 @@ export default function Home() {
                     className={cn(
                       "w-full justify-start text-left text-sm",
                       activeTab === tab.id 
-                        ? "bg-red-600 hover:bg-red-700 text-white" 
+                        ? "bg-yellow-500 hover:bg-yellow-600 text-slate-900" 
                         : "text-slate-300 hover:bg-slate-800 hover:text-slate-50"
                     )}
                     onClick={() => setActiveTab(tab.id)}
