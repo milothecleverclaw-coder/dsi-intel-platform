@@ -900,21 +900,82 @@ cloudflared tunnel run dsi-csi
 
 ## 9. Credentials Checklist
 
-**Before building, verify these are in Bitwarden:**
+**All credentials verified in Bitwarden (2026-03-12):**
 
-| Credential | Purpose | Status |
-|------------|---------|--------|
-| `DATABASE_URL` (Neon) | PostgreSQL database | ⏳ Check BW |
-| `AZURE_BLOB_CONNECTION_STRING` | File storage | ⏳ Check BW |
-| `AZURE_DI_ENDPOINT` | Document Intelligence | ⏳ Check BW |
-| `AZURE_DI_KEY` | Document Intelligence | ⏳ Check BW |
-| `TWELVE_LABS_API_KEY` | Video AI | ⏳ Check BW |
-| `OPENROUTER_API_KEY` | AI chat (Claude/GPT) | ⏳ Check BW |
-| `CLOUDFLARE_TUNNEL_TOKEN` | Tunnel to localhost | ⏳ Check BW |
-| `CLOUDFLARE_API_TOKEN` | DNS management | ⏳ Check BW |
-| `CLOUDFLARE_ZONE_ID` | hotserver.uk zone | ⏳ Check BW |
+### ✅ Ready to Use:
 
-**Milo:** I need the vault unlocked to verify these exist. Run `bw unlock` and I'll check.
+| Credential | BW Item Name | Value/Notes |
+|------------|--------------|-------------|
+| **DATABASE_URL** (Neon) | `neon.tech key` | See BW notes field for full connection string |
+| **AZURE_DI_ENDPOINT** | `Azure Service Principal - DSI Intel Platform` | `https://southeastasia.api.cognitive.microsoft.com/` |
+| **AZURE_DI_KEY** | `Azure Service Principal - DSI Intel Platform` | In `login.password` field (redacted) |
+| **AZURE_CLIENT_ID** | `Azure Service Principal - DSI Intel Platform` | In `login.username` field |
+| **AZURE_TENANT_ID** | `Azure Service Principal - DSI Intel Platform` | `68678f9a-013f-491a-9512-d43b36a25817` |
+| **TWELVE_LABS_API_KEY** | `Twelve Labs API Key` | See BW `login.password` field |
+| **OPENROUTER_API_KEY** | `openrouter` | `<OPENROUTER_KEY>` |
+| **CLOUDFLARE_API_TOKEN** | `Cloudflare cli token` | Zone-level (hotserver.uk) |
+| **CLOUDFLARE_ZONE_ID** | - | `c1b98e7e9512cf09b61ce22b930d1598` |
+
+### ⏳ Pending:
+
+| Credential | Status | Action Needed |
+|------------|--------|---------------|
+| **AZURE_BLOB_CONNECTION_STRING** | ❌ Not in BW | Need to create storage account + grant SP access |
+| **CLOUDFLARE_TUNNEL_TOKEN** | ❌ Token is zone-level only | Need account-level token OR create tunnel in dashboard |
+
+### Environment Variables for `.env`:
+
+```bash
+# Database
+DATABASE_URL="postgresql://neondb_owner:<PASSWORD>@ep-lingering-glitter-a1g039y6-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+# ↑ Get from BW: "neon.tech key" → notes field
+
+# Azure Document Intelligence
+AZURE_TENANT_ID="68678f9a-013f-491a-9512-d43b36a25817"
+AZURE_CLIENT_ID="dfc3658c-b137-45a4-a8f6-4221843c6af4"
+AZURE_CLIENT_SECRET="<from BW: Azure Service Principal - DSI Intel Platform>"
+AZURE_DI_ENDPOINT="https://southeastasia.api.cognitive.microsoft.com/"
+
+# Azure Blob Storage (PENDING - need to create)
+# AZURE_BLOB_CONNECTION_STRING="..."
+
+# Video AI
+TWELVE_LABS_API_KEY="<from BW: Twelve Labs API Key>"
+
+# AI Chat
+OPENROUTER_API_KEY="<from BW: openrouter>"
+
+# Cloudflare
+CLOUDFLARE_API_TOKEN="<from BW: Cloudflare cli token>"
+CLOUDFLARE_ZONE_ID="c1b98e7e9512cf09b61ce22b930d1598"
+```
+
+**All actual values are in Bitwarden. Use the BW item names above to retrieve them.**
+
+### To Get Azure Blob Connection String:
+
+Run these Azure CLI commands (or use the prompt I gave Champ earlier):
+
+```bash
+# 1. Create storage account
+az storage account create \
+  --name dsiintelplatform \
+  --resource-group <your-rg> \
+  --location southeastasia \
+  --sku Standard_LRS
+
+# 2. Get connection string
+az storage account show-connection-string \
+  --name dsiintelplatform \
+  --resource-group <your-rg> \
+  -o tsv
+
+# 3. Grant SP access (after getting connection string)
+az role assignment create \
+  --assignee dfc3658c-b137-45a4-a8f6-4221843c6af4 \
+  --role "Storage Blob Data Contributor" \
+  --scope <storage-account-resource-id>
+```
 
 ---
 
