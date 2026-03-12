@@ -729,7 +729,196 @@ Backend → Trigger Azure DI / Twelve Labs processing
 
 ---
 
-## 6. Build Order Recommendation
+## 6. AI System Prompt
+
+**CRITICAL:** The AI chat must use this system prompt to ensure proper behavior:
+
+```
+คุณเป็นผู้ช่วยวิเคราะห์คดีอาชญากรรม (CSI Case Assistant) ของกรมสอบสวนคดีพิเศษ (DSI)
+
+## บทบาทของคุณ:
+- ช่วยเจ้าหน้าที่สอบสวนวิเคราะห์หลักฐานและ timeline
+- ระบุช่องโหว่ในคดีที่อาจทำให้คดีแพ้ในชั้นศาล
+- แนะนำหลักฐานเพิ่มเติมที่ควรหา
+- เตือนเมื่อเห็นจุดอ่อนในข้อเท็จจริง
+
+## หลักการสำคัญ:
+1. **เป้าหมายคือ "ชนะคดี"** - ทุกคำแนะนำต้องมุ่งไปสู่การทำให้คดีแข็งแกร่งในชั้นศาล
+2. **ระบุสิ่งที่ขาด** - หาช่องโหว่ หาหลักฐานที่ยังไม่มี
+3. **ตั้งคำถามเสมอ** - "มี CCTV ตรงนี้ไหม?" "มีพยานยืนยันไหม?"
+4. **พูดภาษาไทย** - ตอบเป็นภาษาไทยเสมอ ใช้คำศัพท์ทางกฎหมายที่เหมาะสม
+
+## ข้อมูลคดีปัจจุบัน:
+{case_context}
+
+## Persona ที่เกี่ยวข้อง:
+{personas_context}
+
+## Pins (จุดสำคัญที่พบ):
+{pins_context}
+
+## คำแนะนำในการตอบ:
+- เมื่อวิเคราะห์ timeline ให้ระบุช่องว่างที่อาจถูกทนายฝ่ายตรงข้ามโจมตี
+- เมื่อดู pins ให้สังเกตว่ามีการ tag persona ครบหรือยัง
+- เสนอหลักฐานที่ควรหาเพิ่ม (เช่น CCTV ระหว่างทาง, พยานบุคคล, บันทึกการโทรเพิ่มเติม)
+- ใช้รูปแบบ timeline แบบ ASCII เมื่อช่วยให้เห็นภาพชัดเจนขึ้น
+```
+
+### Implementation Notes:
+
+```javascript
+// Backend: /api/chat
+const systemPrompt = CSI_SYSTEM_PROMPT
+  .replace('{case_context}', case.narrativeReport)
+  .replace('{personas_context}', formatPersonas(personas))
+  .replace('{pins_context}', formatPins(pins));
+
+const response = await openrouter.chat({
+  model: selectedModel, // claude-3.5-sonnet, gpt-4o, gemini-1.5-pro
+  messages: [
+    { role: 'system', content: systemPrompt },
+    ...conversationHistory,
+    { role: 'user', content: userMessage }
+  ]
+});
+```
+
+---
+
+## 7. Development Guidelines
+
+### Git Workflow: Micro Commits
+
+**RULE:** Commit after every feature built and tested. This gives rollback points.
+
+```
+✅ GOOD:
+git commit -m "feat: add case creation form"
+git commit -m "feat: connect case form to API"
+git commit -m "test: verify case saves to Neon DB"
+git commit -m "feat: add evidence upload UI"
+git commit -m "feat: integrate Azure Blob upload"
+git commit -m "fix: handle large file upload timeout"
+
+❌ BAD:
+git commit -m "add everything" (after 3 days of work)
+```
+
+### Commit Message Format:
+
+```
+feat: [what you built]
+fix: [what you fixed]
+test: [what you tested]
+refactor: [what you cleaned up]
+docs: [what you documented]
+```
+
+### Before Each Commit:
+
+1. ✅ Test the feature manually
+2. ✅ Check console for errors
+3. ✅ Verify data persists in DB
+4. ✅ Then commit
+
+---
+
+## 8. Cloudflare Tunnel Setup
+
+**URL:** `csi.hotserver.uk`
+
+### Prerequisites from Bitwarden:
+
+- `cloudflare_api_token` - for DNS management
+- `cloudflare_tunnel_token` - for tunnel authentication
+- `cloudflare_zone_id` - for hotserver.uk zone
+
+### Setup Steps:
+
+```bash
+# 1. Install cloudflared (if not installed)
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o cloudflared
+chmod +x cloudflared
+sudo mv cloudflared /usr/local/bin/
+
+# 2. Authenticate (use token from BW)
+cloudflared tunnel login
+
+# 3. Create tunnel (if not exists)
+cloudflared tunnel create dsi-csi
+
+# 4. Configure DNS
+cloudflared tunnel route dns dsi-csi csi.hotserver.uk
+
+# 5. Create config file
+mkdir -p ~/.cloudflared
+cat > ~/.cloudflared/config.yml << EOF
+tunnel: dsi-csi
+credentials-file: ~/.cloudflared/dsi-csi.json
+
+ingress:
+  - hostname: csi.hotserver.uk
+    service: http://localhost:3000
+  - service: http_status:404
+EOF
+
+# 6. Run tunnel
+cloudflared tunnel run dsi-csi
+```
+
+### For Development (Quick Tunnel):
+
+```bash
+# Temporary URL for testing (no setup needed)
+cloudflared tunnel --url http://localhost:3000
+# Output: https://random-name.trycloudflare.com
+```
+
+### Production Tunnel (Persistent):
+
+Use the token from BW to run as a service:
+
+```bash
+# Run with token (from BW: cloudflare_tunnel_token)
+cloudflared tunnel run --token <TOKEN_FROM_BW>
+```
+
+### Testing Locally:
+
+```bash
+# 1. Start the app locally
+npm run dev  # or yarn dev (port 3000)
+
+# 2. Start cloudflare tunnel
+cloudflared tunnel run dsi-csi
+
+# 3. Access from anywhere:
+# https://csi.hotserver.uk → your localhost:3000
+```
+
+---
+
+## 9. Credentials Checklist
+
+**Before building, verify these are in Bitwarden:**
+
+| Credential | Purpose | Status |
+|------------|---------|--------|
+| `DATABASE_URL` (Neon) | PostgreSQL database | ⏳ Check BW |
+| `AZURE_BLOB_CONNECTION_STRING` | File storage | ⏳ Check BW |
+| `AZURE_DI_ENDPOINT` | Document Intelligence | ⏳ Check BW |
+| `AZURE_DI_KEY` | Document Intelligence | ⏳ Check BW |
+| `TWELVE_LABS_API_KEY` | Video AI | ⏳ Check BW |
+| `OPENROUTER_API_KEY` | AI chat (Claude/GPT) | ⏳ Check BW |
+| `CLOUDFLARE_TUNNEL_TOKEN` | Tunnel to localhost | ⏳ Check BW |
+| `CLOUDFLARE_API_TOKEN` | DNS management | ⏳ Check BW |
+| `CLOUDFLARE_ZONE_ID` | hotserver.uk zone | ⏳ Check BW |
+
+**Milo:** I need the vault unlocked to verify these exist. Run `bw unlock` and I'll check.
+
+---
+
+## 10. Build Order Recommendation
 
 **Week 1-2: Foundation**
 - Database schema + migrations
