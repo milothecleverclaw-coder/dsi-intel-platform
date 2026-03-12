@@ -10,7 +10,8 @@
     "pm2:start": "pm2 start ecosystem.config.js",
     "pm2:reload": "pm2 reload ecosystem.config.js --update-env",
     "pm2:stop": "pm2 stop dsi-platform",
-    "pm2:delete": "pm2 delete dsi-platform"
+    "pm2:delete": "pm2 delete dsi-platform",
+    "test": "npx vitest run"
   },
   "dependencies": {
     "@azure/ai-form-recognizer": "^5.1.0",
@@ -39,14 +40,22 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.0",
+    "@vitest/runner": "^4.1.0",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^28.1.0",
+    "node-fetch": "^3.3.2",
+    "node-mocks-http": "^1.17.2",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.0.18"
   }
 }
