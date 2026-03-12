@@ -62,7 +62,7 @@ describe('Personas API', () => {
             expect(response.status).toBe(200);
             expect(Array.isArray(data)).toBe(true);
             expect(data).toHaveLength(2);
-            expect(pool.query).toHaveBeenCalledWith('SELECT * FROM personas WHERE case_id = $1', ['case-123']);
+            expect(pool.query).toHaveBeenCalledWith('SELECT DISTINCT ON (persona_id) * FROM personas WHERE case_id = $1 ORDER BY persona_id, created_at DESC', ['case-123']);
         });
 
         it('should return 500 when database error occurs', async () => {
