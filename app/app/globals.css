@@ -5,8 +5,8 @@
   --foreground: #f8fafc;
   --card: #1e293b;
   --card-foreground: #f8fafc;
-  --primary: #dc2626;
-  --primary-foreground: #ffffff;
+  --primary: oklch(47.9% 0.0958 53.1);
+  --primary-foreground: #0f172a;
   --secondary: #334155;
   --secondary-foreground: #f8fafc;
   --muted: #1e293b;
@@ -17,7 +17,7 @@
   --destructive-foreground: #ffffff;
   --border: #334155;
   --input: #334155;
-  --ring: #dc2626;
+  --ring: oklch(47.9% 0.0958 53.1);
   --radius: 0.5rem;
 }
 
@@ -48,8 +48,8 @@
   --foreground: #f8fafc;
   --card: #1e293b;
   --card-foreground: #f8fafc;
-  --primary: #dc2626;
-  --primary-foreground: #ffffff;
+  --primary: oklch(47.9% 0.0958 53.1);
+  --primary-foreground: #0f172a;
   --secondary: #334155;
   --secondary-foreground: #f8fafc;
   --muted: #1e293b;
@@ -60,7 +60,7 @@
   --destructive-foreground: #ffffff;
   --border: #334155;
   --input: #334155;
-  --ring: #dc2626;
+  --ring: oklch(47.9% 0.0958 53.1);
 }
 
 * {
@@ -94,6 +94,6 @@ body {
 
 /* Selection color */
 ::selection {
-  background: rgba(220, 38, 38, 0.3);
-  color: #f8fafc;
+  background: oklch(47.9% 0.0958 53.1 / 0.3);
+  color: #0f172a;
 }

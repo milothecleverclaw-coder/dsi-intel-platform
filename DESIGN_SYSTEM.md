@@ -13,10 +13,11 @@
 - **Surface Elevated**: `#334155` (slate-700) — hover states, modals
 
 ### Accent Colors
-- **Primary Action**: `#dc2626` (red-600) — DSI red, CTAs, active states
+- **Primary Action**: `oklch(47.9% 0.0958 53.1)` (yellow/gold) — CTAs, active states
 - **Secondary Action**: `#3b82f6` (blue-500) — links, secondary buttons
 - **Success**: `#22c55e` (green-500) — success states
 - **Warning**: `#f59e0b` (amber-500) — warnings
+- **Destructive**: `#dc2626` (red-600) — errors, delete actions
 
 ### Text Colors
 - **Primary Text**: `#f8fafc` (slate-50) — headings, important text
