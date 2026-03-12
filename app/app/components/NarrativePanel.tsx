@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Save, Check } from 'lucide-react';
+import { FileText, Save, Check, Edit2, Eye as EyeIcon } from 'lucide-react';
 
 interface NarrativePanelProps {
   caseId: string;
@@ -15,6 +15,7 @@ export function NarrativePanel({ caseId }: NarrativePanelProps) {
   const [saved, setSaved] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch existing narrative
   useEffect(() => {
@@ -30,12 +31,12 @@ export function NarrativePanel({ caseId }: NarrativePanelProps) {
   // Auto-save every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      if (content && !saving) {
+      if (content && !saving && isEditing) {
         saveNarrative(content, false);
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [content, saving]);
+  }, [content, saving, isEditing]);
 
   const saveNarrative = useCallback(async (text: string, showFeedback = true) => {
     if (!text.trim()) return;
@@ -118,80 +119,100 @@ export function NarrativePanel({ caseId }: NarrativePanelProps) {
               </span>
             )}
             <Button
-              onClick={() => saveNarrative(content, true)}
-              disabled={saving}
-              className={`${saved ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white disabled:opacity-50`}
+              onClick={() => setIsEditing(!isEditing)}
+              variant="outline"
               size="sm"
+              className="border-slate-700 text-slate-300 hover:text-slate-50 hover:bg-slate-700"
             >
-              {saved ? (
+              {isEditing ? (
                 <>
-                  <Check className="h-4 w-4 mr-1" />
-                  บันทึกแล้ว
+                  <EyeIcon className="h-4 w-4 mr-1" />
+                  มุมมองอ่าน
                 </>
-              ) : saving ? (
-                'กำลังบันทึก...'
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-1" />
-                  บันทึก
+                  <Edit2 className="h-4 w-4 mr-1" />
+                  แก้ไข
                 </>
               )}
             </Button>
+            {isEditing && (
+              <Button
+                onClick={() => saveNarrative(content, true)}
+                disabled={saving}
+                className={`${saved ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white disabled:opacity-50`}
+                size="sm"
+              >
+                {saved ? (
+                  <>
+                    <Check className="h-4 w-4 mr-1" />
+                    บันทึกแล้ว
+                  </>
+                ) : saving ? (
+                  'กำลังบันทึก...'
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-1" />
+                    บันทึก
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Toolbar */}
-          <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-lg border border-slate-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleFormat('bold')}
-              className="text-slate-300 hover:text-slate-50 hover:bg-slate-800 font-bold"
-            >
-              B
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleFormat('italic')}
-              className="text-slate-300 hover:text-slate-50 hover:bg-slate-800 italic"
-            >
-              I
-            </Button>
-            <div className="w-px h-6 bg-slate-700" />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleFormat('heading')}
-              className="text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-            >
-              หัวข้อ
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleFormat('bullet')}
-              className="text-slate-300 hover:text-slate-50 hover:bg-slate-800"
-            >
-              รายการ
-            </Button>
-          </div>
+          {isEditing ? (
+            <>
+              {/* Toolbar */}
+              <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-lg border border-slate-700">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFormat('bold')}
+                  className="text-slate-300 hover:text-slate-50 hover:bg-slate-800 font-bold"
+                >
+                  B
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFormat('italic')}
+                  className="text-slate-300 hover:text-slate-50 hover:bg-slate-800 italic"
+                >
+                  I
+                </Button>
+                <div className="w-px h-6 bg-slate-700" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFormat('heading')}
+                  className="text-slate-300 hover:text-slate-50 hover:bg-slate-800"
+                >
+                  หัวข้อ
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFormat('bullet')}
+                  className="text-slate-300 hover:text-slate-50 hover:bg-slate-800"
+                >
+                  รายการ
+                </Button>
+              </div>
 
-          {/* Editor */}
-          <textarea
-            id="narrative-editor"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="เขียนสำนวนคดีที่นี่..."
-            className="w-full min-h-[500px] p-4 bg-slate-900 border border-slate-700 rounded-lg text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 resize-none font-mono text-sm leading-relaxed"
-            spellCheck={false}
-          />
-
-          {/* Preview */}
-          {content && (
-            <div className="mt-4">
-              <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">ตัวอย่าง</h4>
-              <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg prose prose-invert prose-sm max-w-none">
+              {/* Editor */}
+              <textarea
+                id="narrative-editor"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="เขียนสำนวนคดีที่นี่..."
+                className="w-full min-h-[500px] p-4 bg-slate-900 border border-slate-700 rounded-lg text-slate-50 placeholder:text-slate-500 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/20 resize-none font-mono text-sm leading-relaxed"
+                spellCheck={false}
+              />
+            </>
+          ) : (
+            <div className="p-6 bg-slate-900/50 border border-slate-700 rounded-lg prose prose-invert prose-sm max-w-none min-h-[500px]">
+              {content ? (
                 <div className="text-slate-300 whitespace-pre-wrap">
                   {content.split('\n').map((line, i) => {
                     // Simple markdown rendering
@@ -208,7 +229,19 @@ export function NarrativePanel({ caseId }: NarrativePanelProps) {
                     return <p key={i} className="mb-2" dangerouslySetInnerHTML={{ __html: formatted }} />;
                   })}
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500">
+                  <FileText className="h-12 w-12 mb-4 opacity-20" />
+                  <p>ยังไม่มีเนื้อหาสำนวนคดี</p>
+                  <Button
+                    variant="link"
+                    onClick={() => setIsEditing(true)}
+                    className="text-yellow-500 hover:text-yellow-400 mt-2"
+                  >
+                    เริ่มเขียนสำนวน
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
