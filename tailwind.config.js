@@ -16,7 +16,7 @@ export default {
           warning: '#f59e0b',
           danger: '#ef4444',
           success: '#10b981',
-          muted: '#64748b',
+          muted: '#94a3b8',
           border: '#1e293b'
         }
       },

@@ -23,7 +23,7 @@ function CharactersPage() {
       case 'high': return 'text-red-400 bg-red-400/10 border-red-400/30'
       case 'medium': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30'
       case 'low': return 'text-green-400 bg-green-400/10 border-green-400/30'
-      default: return 'text-gray-400 bg-gray-400/10 border-gray-400/30'
+      default: return 'text-gray-300 bg-gray-300/10 border-gray-300/30'
     }
   }
 
@@ -41,7 +41,7 @@ function CharactersPage() {
       case 'suspect': return 'text-red-400'
       case 'person-of-interest': return 'text-yellow-400'
       case 'witness': return 'text-blue-400'
-      default: return 'text-gray-400'
+      default: return 'text-gray-300'
     }
   }
 
@@ -72,7 +72,7 @@ function CharactersPage() {
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-fbi-muted" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-300" />
               <input
                 type="text"
                 placeholder="ค้นหาตัวละคร..."
@@ -84,7 +84,7 @@ function CharactersPage() {
 
             {/* Filter */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-fbi-muted" />
+              <Filter className="w-4 h-4 text-gray-300" />
               <select
                 value={filterRisk}
                 onChange={(e) => setFilterRisk(e.target.value)}
@@ -125,14 +125,14 @@ function CharactersPage() {
                       className="w-full h-full object-cover"
                       onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     />
-                    <User className="w-10 h-10 text-fbi-muted hidden" />
+                    <User className="w-10 h-10 text-gray-300 hidden" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white font-medium truncate">{char.name}</h3>
                     {char.alias && (
                       <p className="text-fbi-accent text-sm">"{char.alias}"</p>
                     )}
-                    <p className="text-fbi-muted text-xs mt-1">{char.role}</p>
+                    <p className="text-gray-300 text-xs mt-1">{char.role}</p>
                   </div>
                 </div>
 
@@ -147,7 +147,7 @@ function CharactersPage() {
                 </div>
 
                 {/* Connections */}
-                <div className="mt-3 pt-3 border-t border-fbi-border flex items-center gap-2 text-xs text-fbi-muted">
+                <div className="mt-3 pt-3 border-t border-fbi-border flex items-center gap-2 text-xs text-gray-300">
                   <Link2 className="w-3 h-3" />
                   <span>เชื่อมโยง {char.connections.length} คน</span>
                 </div>
@@ -157,7 +157,7 @@ function CharactersPage() {
         </div>
 
         {/* Stats Bar */}
-        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs text-fbi-muted">
+        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs text-gray-300">
           <span>👤 ตัวละครทั้งหมด: {characters.length}</span>
           <span className="text-red-400">🔴 เสี่ยงสูง: {characters.filter(c => c.riskLevel === 'high').length}</span>
           <span className="text-yellow-400">🟡 เสี่ยงปานกลาง: {characters.filter(c => c.riskLevel === 'medium').length}</span>
@@ -173,7 +173,7 @@ function CharactersPage() {
             <h3 className="text-sm font-medium text-white">รายละเอียดตัวละคร</h3>
             <button
               onClick={() => setSelectedCharacter(null)}
-              className="text-fbi-muted hover:text-white"
+              className="text-gray-300 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
@@ -190,13 +190,13 @@ function CharactersPage() {
                   className="w-full h-full object-cover"
                   onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                 />
-                <User className="w-16 h-16 text-fbi-muted hidden" />
+                <User className="w-16 h-16 text-gray-300 hidden" />
               </div>
               <h4 className="text-white font-medium text-lg">{selectedCharacter.name}</h4>
               {selectedCharacter.alias && (
                 <p className="text-fbi-accent">"{selectedCharacter.alias}"</p>
               )}
-              <p className="text-fbi-muted text-sm">{selectedCharacter.role}</p>
+              <p className="text-gray-300 text-sm">{selectedCharacter.role}</p>
             </div>
 
             {/* Status Badges */}
@@ -212,28 +212,28 @@ function CharactersPage() {
             {/* Timeline */}
             <div className="space-y-3 text-sm mb-6">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-fbi-muted" />
-                <span className="text-fbi-muted">พบครั้งแรก:</span>
+                <Clock className="w-4 h-4 text-gray-300" />
+                <span className="text-gray-300">พบครั้งแรก:</span>
                 <span className="text-white">{selectedCharacter.firstSeen}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-fbi-muted" />
-                <span className="text-fbi-muted">กิจกรรมล่าสุด:</span>
+                <Clock className="w-4 h-4 text-gray-300" />
+                <span className="text-gray-300">กิจกรรมล่าสุด:</span>
                 <span className="text-white">{selectedCharacter.lastActivity}</span>
               </div>
             </div>
 
             {/* Notes */}
             <div className="mb-6">
-              <h5 className="text-xs font-medium text-fbi-muted mb-2 flex items-center gap-1">
+              <h5 className="text-xs font-medium text-gray-300 mb-2 flex items-center gap-1">
                 <Edit2 className="w-3 h-3" /> บันทึก
               </h5>
-              <p className="text-sm text-gray-300">{selectedCharacter.notes}</p>
+              <p className="text-sm text-gray-200">{selectedCharacter.notes}</p>
             </div>
 
             {/* Connections */}
             <div className="pt-4 border-t border-fbi-border">
-              <h5 className="text-xs font-medium text-fbi-muted mb-3 flex items-center gap-1">
+              <h5 className="text-xs font-medium text-gray-300 mb-3 flex items-center gap-1">
                 <Link2 className="w-3 h-3" /> เชื่อมโยงกับ ({selectedCharacter.connections.length})
               </h5>
               <div className="space-y-2">
@@ -253,11 +253,11 @@ function CharactersPage() {
                           className="w-full h-full object-cover"
                           onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                         />
-                        <User className="w-4 h-4 text-fbi-muted hidden" />
+                        <User className="w-4 h-4 text-gray-300 hidden" />
                       </div>
                       <div>
                         <p className="text-sm text-white">{conn.name}</p>
-                        <p className="text-xs text-fbi-muted">{conn.role}</p>
+                        <p className="text-xs text-gray-300">{conn.role}</p>
                       </div>
                     </div>
                   )

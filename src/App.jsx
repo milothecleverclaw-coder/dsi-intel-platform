@@ -111,15 +111,15 @@ function App() {
               <h1 className="text-xl font-bold text-white tracking-wide">
                 DSI INTELLIGENCE PLATFORM
               </h1>
-              <p className="text-xs text-fbi-muted">กรมสอบสวนคดีพิเศษ - ระบบวิเคราะห์ข้อมูล</p>
+              <p className="text-xs text-gray-300">กรมสอบสวนคดีพิเศษ - ระบบวิเคราะห์ข้อมูล</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <Activity className="w-4 h-4 text-fbi-success pulse-glow" />
-              <span className="text-fbi-muted">ACTIVE</span>
+              <span className="text-gray-300">ACTIVE</span>
             </div>
-            <div className="text-xs text-fbi-muted font-mono">
+            <div className="text-xs text-gray-300 font-mono">
               {new Date().toLocaleString('th-TH')}
             </div>
           </div>
@@ -142,7 +142,7 @@ function App() {
                   <CaseIcon className="w-4 h-4 text-fbi-accent" />
                   คดีทั้งหมด
                 </h3>
-                <p className="text-xs text-fbi-muted mt-1">{mockCases.length} คดีในระบบ</p>
+                <p className="text-xs text-gray-300 mt-1">{mockCases.length} คดีในระบบ</p>
               </div>
 
               {/* Cases List */}
@@ -161,13 +161,13 @@ function App() {
                       <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getStatusColor(caseItem.status)}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white font-medium truncate">{caseItem.name}</p>
-                        <p className="text-xs text-fbi-muted">{caseItem.thaiName}</p>
+                        <p className="text-xs text-gray-300">{caseItem.thaiName}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                           <span className={`text-xs ${getPriorityColor(caseItem.priority)}`}>
                             {caseItem.priority === 'high' ? 'สูง' : caseItem.priority === 'medium' ? 'ปานกลาง' : 'ต่ำ'}
                           </span>
-                          <span className="text-xs text-fbi-muted">•</span>
-                          <span className="text-xs text-fbi-muted font-mono">{caseItem.id}</span>
+                          <span className="text-xs text-gray-300">•</span>
+                          <span className="text-xs text-gray-300 font-mono">{caseItem.id}</span>
                         </div>
                       </div>
                     </div>
@@ -193,9 +193,9 @@ function App() {
           style={{ marginLeft: sidebarOpen ? '20rem' : '0' }}
         >
           {sidebarOpen ? (
-            <ChevronLeft className="w-4 h-4 text-fbi-muted" />
+            <ChevronLeft className="w-4 h-4 text-gray-300" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-fbi-muted" />
+            <ChevronRight className="w-4 h-4 text-gray-300" />
           )}
         </button>
 
@@ -211,7 +211,7 @@ function App() {
                   className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-all ${
                     activePage === item.id
                       ? 'bg-fbi-blue text-white border-b-2 border-fbi-accent'
-                      : 'text-fbi-muted hover:text-white hover:bg-fbi-dark'
+                      : 'text-gray-300 hover:text-white hover:bg-fbi-dark'
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
@@ -230,7 +230,7 @@ function App() {
 
       {/* Footer */}
       <footer className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex-shrink-0">
-        <div className="flex items-center justify-between text-xs text-fbi-muted">
+        <div className="flex items-center justify-between text-xs text-gray-300">
           <div className="flex items-center gap-4">
             <span>🔒 CLASSIFIED - DSI INTERNAL USE ONLY</span>
           </div>

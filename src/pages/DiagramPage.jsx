@@ -281,33 +281,33 @@ function DiagramPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-fbi-muted hover:text-white transition-colors"
+                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-gray-300 hover:text-white transition-colors"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-fbi-muted hover:text-white transition-colors"
+                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-gray-300 hover:text-white transition-colors"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
               <button
                 onClick={() => { setZoom(1); setNodes(calculatePositions()) }}
-                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-fbi-muted hover:text-white transition-colors"
+                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-gray-300 hover:text-white transition-colors"
               >
                 <Maximize2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setNodes(calculatePositions())}
-                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-fbi-muted hover:text-white transition-colors"
+                className="p-2 bg-fbi-navy hover:bg-fbi-blue rounded text-gray-300 hover:text-white transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
-              <span className="text-xs text-fbi-muted ml-2">Zoom: {Math.round(zoom * 100)}%</span>
+              <span className="text-xs text-gray-300 ml-2">Zoom: {Math.round(zoom * 100)}%</span>
             </div>
 
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-fbi-muted" />
+              <Filter className="w-4 h-4 text-gray-300" />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -343,7 +343,7 @@ function DiagramPage() {
 
         {/* Legend - Fixed at bottom */}
         <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs flex-shrink-0">
-          <span className="text-fbi-muted">Legend:</span>
+          <span className="text-gray-300">Legend:</span>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-fbi-accent rounded-full" />
             <span className="text-white">ตัวละคร</span>
@@ -380,7 +380,7 @@ function DiagramPage() {
                 </div>
                 <div>
                   <h4 className="text-white font-medium">{selectedNode.name}</h4>
-                  <p className="text-xs text-fbi-muted">
+                  <p className="text-xs text-gray-300">
                     {selectedNode.type === 'character' ? 'ตัวละคร' : 'ไฟล์'}
                   </p>
                 </div>
@@ -391,13 +391,13 @@ function DiagramPage() {
                   {selectedNode.alias && (
                     <p className="text-fbi-accent text-sm mb-2">"{selectedNode.alias}"</p>
                   )}
-                  <p className="text-sm text-gray-300 mb-4">{selectedNode.role}</p>
+                  <p className="text-sm text-gray-200 mb-4">{selectedNode.role}</p>
                 </>
               )}
 
               {/* Connections */}
               <div className="pt-4 border-t border-fbi-border">
-                <h5 className="text-xs font-medium text-fbi-muted mb-3">ความสัมพันธ์</h5>
+                <h5 className="text-xs font-medium text-gray-300 mb-3">ความสัมพันธ์</h5>
                 <div className="space-y-2">
                   {relationships
                     .filter(r => r.from === selectedNode.id || r.to === selectedNode.id)
@@ -409,7 +409,7 @@ function DiagramPage() {
                         <div key={idx} className="flex items-center gap-2 text-sm bg-fbi-navy p-2 rounded">
                           <span className="text-fbi-accent">→</span>
                           <span className="text-white truncate">{other?.name || otherId}</span>
-                          <span className="text-fbi-muted text-xs ml-auto">{rel.label}</span>
+                          <span className="text-gray-300 text-xs ml-auto">{rel.label}</span>
                         </div>
                       )
                     })}
@@ -417,7 +417,7 @@ function DiagramPage() {
               </div>
             </div>
           ) : (
-            <div className="text-center text-fbi-muted py-8">
+            <div className="text-center text-gray-300 py-8">
               <Link2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
               <p>คลิกที่โหนดเพื่อดูรายละเอียด</p>
             </div>
@@ -428,11 +428,11 @@ function DiagramPage() {
         <div className="p-4 border-t border-fbi-border text-xs">
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-fbi-navy p-2 rounded">
-              <span className="text-fbi-muted block">โหนด</span>
+              <span className="text-gray-300 block">โหนด</span>
               <span className="text-white font-medium">{nodes.length}</span>
             </div>
             <div className="bg-fbi-navy p-2 rounded">
-              <span className="text-fbi-muted block">เส้นเชื่อม</span>
+              <span className="text-gray-300 block">เส้นเชื่อม</span>
               <span className="text-white font-medium">{relationships.length}</span>
             </div>
           </div>

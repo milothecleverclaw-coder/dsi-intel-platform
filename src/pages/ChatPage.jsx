@@ -108,7 +108,7 @@ function ChatPage({ selectedCase }) {
               </div>
               <div>
                 <h3 className="text-white font-medium">AI ผู้ช่วยสืบสวน</h3>
-                <p className="text-xs text-fbi-muted">
+                <p className="text-xs text-gray-300">
                   {selectedCase?.name} ({selectedCase?.id})
                 </p>
               </div>
@@ -121,7 +121,7 @@ function ChatPage({ selectedCase }) {
                 className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${
                   chatMode === 'private' 
                     ? 'bg-fbi-accent text-white' 
-                    : 'text-fbi-muted hover:text-white'
+                    : 'text-gray-300 hover:text-white'
                 }`}
               >
                 <User className="w-4 h-4" />
@@ -132,7 +132,7 @@ function ChatPage({ selectedCase }) {
                 className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${
                   chatMode === 'room' 
                     ? 'bg-fbi-accent text-white' 
-                    : 'text-fbi-muted hover:text-white'
+                    : 'text-gray-300 hover:text-white'
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -175,7 +175,7 @@ function ChatPage({ selectedCase }) {
                 </div>
                 
                 {/* Message Meta */}
-                <div className={`flex items-center gap-2 mt-1 text-xs text-fbi-muted ${
+                <div className={`flex items-center gap-2 mt-1 text-xs text-gray-300 ${
                   msg.type === 'user' ? 'justify-end' : ''
                 }`}>
                   <span>{formatTime(msg.timestamp)}</span>
@@ -205,7 +205,7 @@ function ChatPage({ selectedCase }) {
               </div>
               <div className="bg-fbi-navy rounded-lg p-3 flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-fbi-accent" />
-                <span className="text-sm text-fbi-muted">กำลังวิเคราะห์...</span>
+                <span className="text-sm text-gray-300">กำลังวิเคราะห์...</span>
               </div>
             </div>
           )}
@@ -221,7 +221,7 @@ function ChatPage({ selectedCase }) {
               <button
                 key={idx}
                 onClick={() => setInputValue(q)}
-                className="px-3 py-1 bg-fbi-navy hover:bg-fbi-blue rounded-full text-xs text-fbi-muted hover:text-white whitespace-nowrap transition-colors flex-shrink-0"
+                className="px-3 py-1 bg-fbi-navy hover:bg-fbi-blue rounded-full text-xs text-gray-300 hover:text-white whitespace-nowrap transition-colors flex-shrink-0"
               >
                 {q}
               </button>
@@ -243,7 +243,7 @@ function ChatPage({ selectedCase }) {
             <button
               onClick={handleSend}
               disabled={!inputValue.trim() || isTyping}
-              className="px-4 py-2 bg-fbi-accent hover:bg-blue-600 disabled:bg-fbi-navy disabled:text-fbi-muted text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-fbi-accent hover:bg-blue-600 disabled:bg-fbi-navy disabled:text-gray-300 text-white rounded-lg transition-colors"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -256,11 +256,11 @@ function ChatPage({ selectedCase }) {
         <div className="w-72 bg-fbi-dark border-l border-fbi-border flex flex-col flex-shrink-0">
           <div className="p-4 border-b border-fbi-border flex-shrink-0">
             <h3 className="text-sm font-medium text-white">ห้องรวม: {selectedCase?.id}</h3>
-            <p className="text-xs text-fbi-muted mt-1">3 คนออนไลน์</p>
+            <p className="text-xs text-gray-300 mt-1">3 คนออนไลน์</p>
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto">
-            <h4 className="text-xs font-medium text-fbi-muted mb-3">เจ้าหน้าที่ในห้อง</h4>
+            <h4 className="text-xs font-medium text-gray-300 mb-3">เจ้าหน้าที่ในห้อง</h4>
             <div className="space-y-3">
               {[
                 { name: 'พ.ต.อ. สมศักดิ์', role: 'หัวหน้าทีม', online: true },
@@ -270,7 +270,7 @@ function ChatPage({ selectedCase }) {
                 <div key={idx} className="flex items-center gap-3">
                   <div className="relative">
                     <div className="w-8 h-8 bg-fbi-navy rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-fbi-muted" />
+                      <User className="w-4 h-4 text-gray-300" />
                     </div>
                     {user.online && (
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-fbi-dark" />
@@ -278,7 +278,7 @@ function ChatPage({ selectedCase }) {
                   </div>
                   <div>
                     <p className="text-sm text-white">{user.name}</p>
-                    <p className="text-xs text-fbi-muted">{user.role}</p>
+                    <p className="text-xs text-gray-300">{user.role}</p>
                   </div>
                 </div>
               ))}
@@ -286,15 +286,15 @@ function ChatPage({ selectedCase }) {
           </div>
 
           <div className="p-4 border-t border-fbi-border flex-shrink-0">
-            <h4 className="text-xs font-medium text-fbi-muted mb-3">กิจกรรมล่าสุด</h4>
+            <h4 className="text-xs font-medium text-gray-300 mb-3">กิจกรรมล่าสุด</h4>
             <div className="space-y-2 text-xs">
               <div className="bg-fbi-navy p-2 rounded">
                 <span className="text-fbi-accent">พ.ต.อ. สมศักดิ์</span>
-                <span className="text-fbi-muted"> อัพโหลดไฟล์ใหม่</span>
+                <span className="text-gray-300"> อัพโหลดไฟล์ใหม่</span>
               </div>
               <div className="bg-fbi-navy p-2 rounded">
                 <span className="text-fbi-accent">ร.ต.อ. ประยุทธ์</span>
-                <span className="text-fbi-muted"> เพิ่มตัวละครใหม่</span>
+                <span className="text-gray-300"> เพิ่มตัวละครใหม่</span>
               </div>
             </div>
           </div>

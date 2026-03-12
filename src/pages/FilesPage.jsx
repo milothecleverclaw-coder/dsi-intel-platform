@@ -70,7 +70,7 @@ function FilesPage() {
       case 'audio': return <FileAudio className="w-5 h-5 text-purple-400" />
       case 'document': return <FileText className="w-5 h-5 text-blue-400" />
       case 'image': return <FileImage className="w-5 h-5 text-green-400" />
-      default: return <FileText className="w-5 h-5 text-gray-400" />
+      default: return <FileText className="w-5 h-5 text-gray-300" />
     }
   }
 
@@ -100,7 +100,7 @@ function FilesPage() {
           <div className="flex items-center justify-between gap-4">
             {/* Search */}
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-fbi-muted" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-300" />
               <input
                 type="text"
                 placeholder="ค้นหาไฟล์..."
@@ -112,7 +112,7 @@ function FilesPage() {
 
             {/* Filter */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-fbi-muted" />
+              <Filter className="w-4 h-4 text-gray-300" />
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -136,9 +136,9 @@ function FilesPage() {
 
         {/* Drop Zone */}
         <div className="border-b border-fbi-border border-dashed m-4 p-8 rounded-lg bg-fbi-navy/30 text-center">
-          <Upload className="w-12 h-12 text-fbi-muted mx-auto mb-2" />
-          <p className="text-fbi-muted text-sm">ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
-          <p className="text-fbi-muted/60 text-xs mt-1">รองรับ: MP4, MP3, PDF, JPG, PNG</p>
+          <Upload className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+          <p className="text-gray-300 text-sm">ลากไฟล์มาวางที่นี่ หรือคลิกเพื่อเลือกไฟล์</p>
+          <p className="text-gray-400 text-xs mt-1">รองรับ: MP4, MP3, PDF, JPG, PNG</p>
         </div>
 
         {/* File Grid */}
@@ -200,7 +200,7 @@ function FilesPage() {
                   {getFileIcon(file.type)}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate font-medium">{file.name}</p>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-fbi-muted">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-300">
                       <span>{file.size}</span>
                       {file.duration && (
                         <>
@@ -217,7 +217,7 @@ function FilesPage() {
         </div>
 
         {/* Stats Bar */}
-        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs text-fbi-muted">
+        <div className="bg-fbi-dark border-t border-fbi-border px-4 py-2 flex items-center gap-6 text-xs text-gray-300">
           <span>📁 ไฟล์ทั้งหมด: {files.length}</span>
           <span>📹 วิดีโอ: {files.filter(f => f.type === 'video').length}</span>
           <span>🎤 เสียง: {files.filter(f => f.type === 'audio').length}</span>
@@ -234,7 +234,7 @@ function FilesPage() {
             <h3 className="text-sm font-medium text-white">รายละเอียดไฟล์</h3>
             <button
               onClick={() => setSelectedFile(null)}
-              className="text-fbi-muted hover:text-white"
+              className="text-gray-300 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
@@ -274,7 +274,7 @@ function FilesPage() {
                       </button>
                       <div className="w-full text-center px-4">
                         <p className="text-white text-sm font-medium truncate">{selectedFile.name}</p>
-                        <p className="text-gray-300 text-xs">{selectedFile.duration}</p>
+                        <p className="text-gray-200 text-xs">{selectedFile.duration}</p>
                       </div>
                       <audio
                         ref={audioRef}
@@ -312,7 +312,7 @@ function FilesPage() {
                       </button>
                       <div className="w-full text-center">
                         <p className="text-white text-sm font-medium truncate">{selectedFile.name}</p>
-                        <p className="text-fbi-muted text-xs">{selectedFile.duration}</p>
+                        <p className="text-gray-300 text-xs">{selectedFile.duration}</p>
                       </div>
                       <audio
                         ref={audioRef}
@@ -343,33 +343,33 @@ function FilesPage() {
             {/* Meta Info */}
             <div className="space-y-3 text-sm">
               <div className="flex items-center gap-2">
-                <HardDrive className="w-4 h-4 text-fbi-muted" />
-                <span className="text-fbi-muted">ขนาด:</span>
+                <HardDrive className="w-4 h-4 text-gray-300" />
+                <span className="text-gray-300">ขนาด:</span>
                 <span className="text-white">{selectedFile.size}</span>
               </div>
               {selectedFile.duration && (
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-fbi-muted" />
-                  <span className="text-fbi-muted">ความยาว:</span>
+                  <Clock className="w-4 h-4 text-gray-300" />
+                  <span className="text-gray-300">ความยาว:</span>
                   <span className="text-white">{selectedFile.duration}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-fbi-muted" />
-                <span className="text-fbi-muted">เพิ่มเมื่อ:</span>
+                <Clock className="w-4 h-4 text-gray-300" />
+                <span className="text-gray-300">เพิ่มเมื่อ:</span>
                 <span className="text-white">{selectedFile.dateAdded}</span>
               </div>
             </div>
 
             {/* Description */}
             <div className="mt-4 pt-4 border-t border-fbi-border">
-              <h5 className="text-xs font-medium text-fbi-muted mb-2">คำอธิบาย</h5>
+              <h5 className="text-xs font-medium text-gray-300 mb-2">คำอธิบาย</h5>
               <p className="text-sm text-white">{selectedFile.description}</p>
             </div>
 
             {/* Tags */}
             <div className="mt-4 pt-4 border-t border-fbi-border">
-              <h5 className="text-xs font-medium text-fbi-muted mb-2 flex items-center gap-1">
+              <h5 className="text-xs font-medium text-gray-300 mb-2 flex items-center gap-1">
                 <Tag className="w-3 h-3" /> แท็ก
               </h5>
               <div className="flex flex-wrap gap-2">
@@ -384,14 +384,14 @@ function FilesPage() {
             {/* AI Summary */}
             <div className="mt-4 pt-4 border-t border-fbi-border">
               <h5 className="text-xs font-medium text-fbi-accent mb-2">🤖 สรุปโดย AI</h5>
-              <p className="text-sm text-gray-300">{selectedFile.aiSummary}</p>
+              <p className="text-sm text-gray-200">{selectedFile.aiSummary}</p>
             </div>
 
             {/* Transcription */}
             {selectedFile.transcription && selectedFile.transcription !== '-' && (
               <div className="mt-4 pt-4 border-t border-fbi-border">
                 <h5 className="text-xs font-medium text-fbi-warning mb-2">📝 ถอดความ</h5>
-                <pre className="text-xs text-gray-300 whitespace-pre-wrap bg-fbi-navy p-3 rounded font-mono">
+                <pre className="text-xs text-gray-200 whitespace-pre-wrap bg-fbi-navy p-3 rounded font-mono">
                   {selectedFile.transcription}
                 </pre>
               </div>
@@ -400,7 +400,7 @@ function FilesPage() {
             {/* Related Characters */}
             {selectedFile.relatedCharacters.length > 0 && (
               <div className="mt-4 pt-4 border-t border-fbi-border">
-                <h5 className="text-xs font-medium text-fbi-muted mb-2">👤 บุคคลที่เกี่ยวข้อง</h5>
+                <h5 className="text-xs font-medium text-gray-300 mb-2">👤 บุคคลที่เกี่ยวข้อง</h5>
                 <div className="space-y-2">
                   {selectedFile.relatedCharacters.map((charId) => (
                     <div key={charId} className="flex items-center gap-2 text-sm">
