@@ -1,60 +1,36 @@
-import axios from 'axios';
-
-const TWELVE_LABS_API_KEY = process.env.TWELVE_LABS_API_KEY;
-
-if (!TWELVE_LABS_API_KEY) {
-    throw new Error('Twelve Labs API key is missing.');
-}
-
-const TWELVE_LABS_API_URL = 'https://api.twelvelabs.io/v1/search';
+const TWELVE_LABS_API_KEY = process.env.TWELVE_LABS_API_KEY!;
+const TWELVE_LABS_BASE_URL = 'https://api.twelvelabs.io/v1.3';
 
 export async function POST(request: Request) {
-    const { query, case_id } = await request.json(); // Assuming case_id is passed for context, though not directly used in this simple search.
-
-    if (!query) {
-        return new Response(JSON.stringify({ message: 'Search query is required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
     try {
-        const response = await axios.post(TWELVE_LABS_API_URL, {
-            query: query,
-            limit: 10, // Adjust limit as needed
-            // You might want to filter by a specific Twelve Labs index ID related to the case.
-            // For now, it searches across all indexed content.
-        }, {
+        const { query, indexId } = await request.json();
+
+        if (!query || !indexId) {
+            return new Response(JSON.stringify({ message: 'query and indexId required' }), { status: 400 });
+        }
+
+        const response = await fetch(`${TWELVE_LABS_BASE_URL}/search`, {
+            method: 'POST',
             headers: {
-                'x-api-key': TWELVE_API_KEY,
+                'x-api-key': TWELVE_LABS_API_KEY,
                 'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                query,
+                index_id: indexId,
+                search_options: ['visual', 'conversation', 'text_in_video', 'logo'],
+            }),
         });
 
-        // The response structure from Twelve Labs might vary. Adapt as necessary.
-        // Typically, it would include search results with timestamps or similar identifiers.
-        const searchResults = response.data.results.map((result: any) => ({
-            // Example fields, adjust based on actual Twelve Labs response structure
-            timestamp: result.start_time, // or similar field indicating time in video
-            // Add other relevant info like snippet, confidence score, etc.
-            snippet: result.snippet || `Found at ${result.start_time}`,
-            videoId: result.video_id || 'N/A',
-        }));
-
-        return new Response(JSON.stringify(searchResults), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-        });
-
-    } catch (error) {
-        console.error('Error searching videos with Twelve Labs:', error);
-        let errorMessage = 'Error searching videos';
-        if (axios.isAxiosError(error)) {
-            errorMessage = error.response?.data?.message || error.message;
+        if (!response.ok) {
+            const errorData = await response.json();
+            return new Response(JSON.stringify({ message: 'Search failed', error: errorData }), { status: response.status });
         }
-        return new Response(JSON.stringify({ message: errorMessage }), {
-            status: error.response?.status || 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data), { status: 200 });
+    } catch (error: any) {
+        console.error('Video search error:', error);
+        return new Response(JSON.stringify({ message: error.message || 'Video search failed' }), { status: 500 });
     }
 }

@@ -1,7 +1,7 @@
 import pool from '@/lib/db';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { rows } = await pool.query('SELECT * FROM cases WHERE case_id = $1', [id]);
     if (rows.length === 0) {
@@ -14,8 +14,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const { narrative_report } = await request.json();
     if (!narrative_report) {

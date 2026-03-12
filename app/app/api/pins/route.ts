@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         }
 
         // Generate pin_id using the sequence
-        const sequenceResult = await pool.query('SELECT nextval('pin_sequence') as seq');
+        const sequenceResult = await pool.query("SELECT nextval('pin_sequence'::regclass) as seq");
         const seqNum = sequenceResult.rows[0].seq;
         const pin_id = `P${seqNum.toString().padStart(3, '0')}`;
 

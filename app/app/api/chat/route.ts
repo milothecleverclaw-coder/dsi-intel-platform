@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY!;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
 
 if (!OPENROUTER_API_KEY) {
@@ -8,73 +8,53 @@ if (!OPENROUTER_API_KEY) {
 }
 
 const openai = new OpenAI({
-    apiKey: OPENROUTER_API_KEY,
     baseURL: OPENROUTER_API_URL,
+    apiKey: OPENROUTER_API_KEY,
+    defaultHeaders: {
+        'HTTP-Referer': 'https://csi.hotserver.uk',
+        'X-Title': 'DSI Intel Platform',
+    },
 });
 
 export async function POST(request: Request) {
-    const { messages, caseDetails, personas, pins } = await request.json();
-
-    if (!messages) {
-        return new Response(JSON.stringify({ message: 'Messages are required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
-    // Construct the system prompt with case details, personas, and pins
-    let systemPrompt = `คุณเป็นผู้ช่วยวิเคราะห์คดีอาชญากรรม (CSI Case Assistant) ของ DSI เป้าหมายคือชนะคดี ตอบภาษาไทย ระบุช่องโหว่และหลักฐานที่ขาด`;
-
-    if (caseDetails) {
-        systemPrompt += `\n\n**Case Details:**\nTitle: ${caseDetails.title}\nCase Number: ${caseDetails.case_number}\nNarrative: ${caseDetails.narrative_report}\nStatus: ${caseDetails.status}`;
-    }
-
-    if (personas && personas.length > 0) {
-        systemPrompt += '\n\n**Personas:**\n';
-        personas.forEach((persona: any) => {
-            systemPrompt += `- ${persona.first_name_en || ''} ${persona.last_name_en || ''} (Aliases: ${persona.aliases.join(', ')}, Phones: ${persona.phones.join(', ')}, Role: ${persona.role})\n`;
-        });
-    }
-
-    if (pins && pins.length > 0) {
-        systemPrompt += '\n\n**Pins:**\n';
-        pins.forEach((pin: any) => {
-            systemPrompt += `- ${pin.context} (Importance: ${pin.importance}, Time: ${pin.incident_time || pin.timestamp_start || 'N/A'})
-`;
-        });
-    }
-
-    const chatMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages,
-    ];
-
     try {
+        const { messages, caseContext, personas, pins } = await request.json();
+
+        // Thai CSI Assistant system prompt
+        const systemPrompt = `คุณเป็นผู้ช่วยวิเคราะห์คดีอาชญากรรม (CSI Case Assistant) ของกรมสอบสวนคดีพิเศษ (DSI)
+เป้าหมายคือ "ชนะคดี" — ช่วยระบุช่องโหว่ หลักฐานที่ขาด จุดอ่อนที่ทนายฝ่ายตรงข้ามอาจโจมตี
+ตอบเป็นภาษาไทยเสมอ ใช้คำศัพท์ทางกฎหมายที่เหมาะสม
+
+## ข้อมูลคดีปัจจุบัน:
+${caseContext || 'ไม่มีข้อมูลคดี'}
+
+## Persona ที่เกี่ยวข้อง:
+${personas ? JSON.stringify(personas, null, 2) : 'ไม่มี persona'}
+
+## Pins (จุดสำคัญที่พบ):
+${pins ? JSON.stringify(pins, null, 2) : 'ไม่มี pins'}
+
+## คำแนะนำในการตอบ:
+- เมื่อวิเคราะห์ timeline ให้ระบุช่องว่างที่อาจถูกทนายฝ่ายตรงข้ามโจมตี
+- เมื่อดู pins ให้สังเกตว่ามีการ tag persona ครบหรือยัง
+- เสนอหลักฐานที่ควรหาเพิ่ม (เช่น CCTV ระหว่างทาง, พยานบุคคล, บันทึกการโทรเพิ่มเติม)`;
+
         const response = await openai.chat.completions.create({
-            model: 'anthropic/claude-3.5-sonnet', // Specified model via OpenRouter
-            messages: chatMessages,
-            // stream: true, // Uncomment if you want to implement streaming responses
+            model: 'anthropic/claude-3.5-sonnet',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                ...messages,
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
         });
 
-        // Ensure response.choices exists and has at least one choice
-        if (response.choices && response.choices.length > 0 && response.choices[0].message) {
-            return new Response(JSON.stringify(response.choices[0].message), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        } else {
-            console.error('Invalid response structure from OpenAI:', response);
-            return new Response(JSON.stringify({ message: 'Invalid response from AI model' }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-
+        return new Response(JSON.stringify({ 
+            response: response.choices[0].message.content,
+            model: response.model,
+        }), { status: 200 });
     } catch (error) {
-        console.error('Error communicating with OpenRouter:', error);
-        return new Response(JSON.stringify({ message: 'Error communicating with AI service' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
+        console.error('AI Chat Error:', error);
+        return new Response(JSON.stringify({ message: 'AI chat failed' }), { status: 500 });
     }
 }

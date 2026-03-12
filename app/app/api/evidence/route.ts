@@ -1,56 +1,46 @@
 import { BlobServiceClient } from '@azure/storage-blob';
-import { nanoid } from 'nanoid'; // Assuming nanoid is installed or can be added
 import pool from '@/lib/db';
 
-const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER;
-
-if (!AZURE_STORAGE_CONNECTION_STRING || !AZURE_STORAGE_CONTAINER) {
-  throw new Error('Azure Storage credentials missing in environment variables.');
-}
-
+const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING!;
+const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER!;
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 
-export async function POST(request: Request, { params }: { params: { caseId: string } }) {
-  const caseId = params.caseId;
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const caseId = searchParams.get('caseId');
+  if (!caseId) return new Response(JSON.stringify({ message: 'caseId required' }), { status: 400 });
+  const { rows } = await pool.query('SELECT * FROM evidence WHERE case_id = $1 ORDER BY uploaded_at DESC', [caseId]);
+  return new Response(JSON.stringify(rows), { status: 200 });
+}
+
+export async function POST(request: Request) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
+  const caseId = formData.get('caseId') as string;
+  const displayName = formData.get('displayName') as string;
 
-  if (!file) {
-    return new Response(JSON.stringify({ message: 'No file uploaded' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  if (!file || !caseId) {
+    return new Response(JSON.stringify({ message: 'file and caseId required' }), { status: 400 });
   }
 
-  const fileExtension = file.name.split('.').pop();
-  const filename = `${nanoid()}.${fileExtension}`;
-  const blobPath = `${caseId}/${filename}`;
-  const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER);
-  const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
+  const ext = file.name.split('.').pop();
+  const fileType = file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : file.type.startsWith('image') ? 'image' : 'document';
+  const blobName = `${caseId}/${Date.now()}-${file.name}`;
 
   try {
-    await blockBlobClient.uploadData(file as unknown as Blob, {
-      // You might want to set metadata or content type here if needed
-      // metadata: { caseId: caseId },
-      // blobHTTPHeaders: { blobContentType: file.type },
-    });
+    const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+    const buffer = await file.arrayBuffer();
+    await blockBlobClient.uploadData(buffer, { blobHTTPHeaders: { blobContentType: file.type } });
 
-    // Save evidence metadata to the database
     const { rows } = await pool.query(
-      'INSERT INTO evidence (case_id, filename, file_type, blob_path) VALUES ($1, $2, $3, $4) RETURNING *',
-      [caseId, file.name, file.type, blobPath]
+      'INSERT INTO evidence (case_id, filename, display_name, file_type, blob_path) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [caseId, file.name, displayName || file.name, fileType, blobName]
     );
 
-    return new Response(JSON.stringify(rows[0]), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify(rows[0]), { status: 201 });
   } catch (error) {
-    console.error('Error uploading file to Azure Blob:', error);
-    return new Response(JSON.stringify({ message: 'Error uploading file' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Evidence upload error:', error);
+    return new Response(JSON.stringify({ message: 'Upload failed' }), { status: 500 });
   }
 }

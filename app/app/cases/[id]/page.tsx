@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 
 // Dummy data for now, will be replaced by actual data fetching
