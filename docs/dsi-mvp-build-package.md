@@ -827,60 +827,44 @@ docs: [what you documented]
 
 **URL:** `csi.hotserver.uk`
 
-### Prerequisites from Bitwarden:
+### ✅ ALREADY SET UP!
 
-- `cloudflare_api_token` - for DNS management
-- `cloudflare_tunnel_token` - for tunnel authentication
-- `cloudflare_zone_id` - for hotserver.uk zone
+The tunnel is created and ready. All you need to do is run cloudflared on your machine.
 
-### Setup Steps:
+### Quick Start:
 
 ```bash
-# 1. Install cloudflared (if not installed)
-curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o cloudflared
-chmod +x cloudflared
-sudo mv cloudflared /usr/local/bin/
+# Get tunnel token from BW: "Cloudflare Tunnel - DSI CSI"
 
-# 2. Authenticate (use token from BW)
-cloudflared tunnel login
-
-# 3. Create tunnel (if not exists)
-cloudflared tunnel create dsi-csi
-
-# 4. Configure DNS
-cloudflared tunnel route dns dsi-csi csi.hotserver.uk
-
-# 5. Create config file
-mkdir -p ~/.cloudflared
-cat > ~/.cloudflared/config.yml << EOF
-tunnel: dsi-csi
-credentials-file: ~/.cloudflared/dsi-csi.json
-
-ingress:
-  - hostname: csi.hotserver.uk
-    service: http://localhost:3000
-  - service: http_status:404
-EOF
-
-# 6. Run tunnel
-cloudflared tunnel run dsi-csi
+# Run the tunnel (exposes localhost:3000 as https://csi.hotserver.uk)
+cloudflared tunnel run --token <TUNNEL_TOKEN_FROM_BW>
 ```
 
-### For Development (Quick Tunnel):
+### Tunnel Details:
+
+| Property | Value |
+|----------|-------|
+| Tunnel ID | `37816de7-65ab-4f54-ad26-c3de7c45793e` |
+| Tunnel Name | `dsi-csi` |
+| DNS Record | `csi.hotserver.uk` → tunnel |
+| Local Port | `http://localhost:3000` |
+
+### Full Setup (already done):
+
+The tunnel and DNS are already configured. The above "Quick Start" is all you need.
+
+If you ever need to recreate:
 
 ```bash
-# Temporary URL for testing (no setup needed)
-cloudflared tunnel --url http://localhost:3000
-# Output: https://random-name.trycloudflare.com
-```
+# Create tunnel via API (already done)
+curl -X POST "https://api.cloudflare.com/client/v4/accounts/<account_id>/tunnels" \
+  -H "Authorization: Bearer <API_TOKEN>" \
+  -d '{"name":"dsi-csi"}'
 
-### Production Tunnel (Persistent):
-
-Use the token from BW to run as a service:
-
-```bash
-# Run with token (from BW: cloudflare_tunnel_token)
-cloudflared tunnel run --token <TOKEN_FROM_BW>
+# Create DNS (already done)
+curl -X POST "https://api.cloudflare.com/client/v4/zones/<zone_id>/dns_records" \
+  -H "Authorization: Bearer <API_TOKEN>" \
+  -d '{"type":"CNAME","name":"csi","content":"<tunnel_id>.cfargotunnel.com","proxied":true}'
 ```
 
 ### Testing Locally:
@@ -916,12 +900,11 @@ cloudflared tunnel run dsi-csi
 | **OPENROUTER_API_KEY** | `openrouter` | `sk-or-v1-13e6...` |
 | **CLOUDFLARE_API_TOKEN** | `Cloudflare cli token` | Zone-level (hotserver.uk) |
 | **CLOUDFLARE_ZONE_ID** | - | `c1b98e7e9512cf09b61ce22b930d1598` |
+| **CLOUDFLARE_TUNNEL_TOKEN** | `Cloudflare Tunnel - DSI CSI` | ✅ **READY!** Tunnel ID: `37816de7-65ab-4f54-ad26-c3de7c45793e` |
 
 ### ⏳ Pending:
 
-| Credential | Status | Action Needed |
-|------------|--------|---------------|
-| **CLOUDFLARE_TUNNEL_TOKEN** | ❌ Token is zone-level only | Need account-level token OR create tunnel in dashboard |
+*(All credentials now ready!)*
 
 ### Environment Variables for `.env`:
 
