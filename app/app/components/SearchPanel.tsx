@@ -90,6 +90,25 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
     }
   }, [caseId]);
 
+  // Fetch SAS URL when document preview opens
+  useEffect(() => {
+    if (docPreviewOpen && selectedDoc) {
+      setSasLoading(true);
+      setSasUrl(null);
+      fetch(`/api/evidence/file/${selectedDoc.evidence_id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.url) {
+            setSasUrl(data.url);
+          }
+        })
+        .catch(err => console.error('Failed to fetch SAS URL:', err))
+        .finally(() => setSasLoading(false));
+    } else if (!docPreviewOpen) {
+      setSasUrl(null);
+    }
+  }, [docPreviewOpen, selectedDoc]);
+
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
@@ -132,7 +151,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
       const res = await fetch('/api/search/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ indexId: caseIndexId, query: videoQuery }),
+        body: JSON.stringify({ indexId: caseIndexId, query_text: videoQuery }),
       });
       const data = await res.json();
       
