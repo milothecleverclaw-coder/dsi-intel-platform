@@ -57,6 +57,15 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
   // Saved evidence view states
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [savedPreviewOpen, setSavedPreviewOpen] = useState(false);
+  const [sasUrl, setSasUrl] = useState<string | null>(null);
+  const [sasLoading, setSasLoading] = useState(false);
+
+  // Clear SAS URL when dialog closes
+  useEffect(() => {
+    if (!savedPreviewOpen) {
+      setSasUrl(null);
+    }
+  }, [savedPreviewOpen]);
 
   useEffect(() => {
     fetch(`/api/evidence?caseId=${caseId}`)
@@ -136,9 +145,27 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
     }
   };
 
-  const openSavedPreview = (ev: Evidence) => {
+  const openSavedPreview = async (ev: Evidence) => {
     setSelectedEvidence(ev);
     setSavedPreviewOpen(true);
+    
+    // Fetch SAS URL for the file
+    if (ev.file_type === 'video' || ev.file_type === 'image') {
+      setSasLoading(true);
+      try {
+        const res = await fetch(`/api/evidence/file/${ev.evidence_id}`);
+        const data = await res.json();
+        if (res.ok) {
+          setSasUrl(data.url);
+        } else {
+          console.error('Failed to get SAS URL:', data.message);
+        }
+      } catch (e) {
+        console.error('Error fetching SAS URL:', e);
+      } finally {
+        setSasLoading(false);
+      }
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -305,12 +332,24 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
             {/* Left Pane: Raw content / Placeholder */}
             <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
               <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl mb-6 w-full max-w-2xl">
-                {selectedEvidence?.file_type === 'video' ? (
+                {sasLoading ? (
+                  <div className="flex items-center justify-center h-48">
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  </div>
+                ) : selectedEvidence?.file_type === 'video' ? (
                   <VideoPlayer 
-                    videoUrl={`https://dsiintelplatform.blob.core.windows.net/evidence/${selectedEvidence.blob_path}`}
+                    videoUrl={sasUrl || ''}
                   />
                 ) : selectedEvidence?.file_type === 'image' ? (
-                  <Image className="h-24 w-24 text-green-500 opacity-50 mx-auto" />
+                  sasUrl ? (
+                    <img 
+                      src={sasUrl} 
+                      alt={selectedEvidence.filename}
+                      className="max-h-96 max-w-full object-contain mx-auto rounded-lg"
+                    />
+                  ) : (
+                    <Image className="h-24 w-24 text-green-500 opacity-50 mx-auto" />
+                  )
                 ) : (
                   <FileText className="h-24 w-24 text-blue-500 opacity-50 mx-auto" />
                 )}
