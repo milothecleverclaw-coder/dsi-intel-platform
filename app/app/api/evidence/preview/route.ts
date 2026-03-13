@@ -9,7 +9,15 @@ export async function POST(request: Request) {
         const container = process.env.AZURE_STORAGE_CONTAINER;
 
         if (!endpoint || !apiKey || !connString || !container) {
-             return new Response(JSON.stringify({ message: 'Server configuration missing' }), { status: 500 });
+             return new Response(JSON.stringify({ 
+                message: 'Server configuration missing',
+                missing: {
+                    endpoint: !endpoint,
+                    apiKey: !apiKey,
+                    connString: !connString,
+                    container: !container
+                }
+             }), { status: 500 });
         }
 
         const credential = new AzureKeyCredential(apiKey);

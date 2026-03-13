@@ -1,9 +1,52 @@
 import pool from '@/lib/db';
-import { BlobServiceClient } from '@azure/storage-blob';
+import { BlobServiceClient, generateBlobSASQueryParameters, BlobSASPermissions, StorageSharedKeyCredential } from '@azure/storage-blob';
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING!;
 const AZURE_STORAGE_CONTAINER = process.env.AZURE_STORAGE_CONTAINER!;
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+
+// Helper to generate SAS URL for a blob
+async function generateSASUrl(blobName: string): Promise<string> {
+  const connectionStringParts = AZURE_STORAGE_CONNECTION_STRING.split(';');
+  let accountName = '';
+  let accountKey = '';
+
+  for (const part of connectionStringParts) {
+    if (part.startsWith('AccountName=')) {
+      accountName = part.replace('AccountName=', '');
+    }
+    if (part.startsWith('AccountKey=')) {
+      accountKey = part.replace('AccountKey=', '');
+    }
+  }
+
+  const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
+  const sasOptions = {
+    containerName: AZURE_STORAGE_CONTAINER,
+    blobName: blobName,
+    permissions: BlobSASPermissions.parse('r'),
+    startsOn: new Date(),
+    expiresOn: new Date(new Date().valueOf() + 60 * 60 * 1000), // 1 hour
+  };
+
+  const sasToken = generateBlobSASQueryParameters(sasOptions, sharedKeyCredential).toString();
+  // URL-encode the blob name for the URL (but signature was calculated with decoded name)
+  const encodedBlobName = blobName.split('/').map(part => encodeURIComponent(part)).join('/');
+  return `https://${accountName}.blob.core.windows.net/${AZURE_STORAGE_CONTAINER}/${encodedBlobName}?${sasToken}`;
+}
+
+// Extract blob name from full Azure blob URL
+function extractBlobName(imageUrl: string): string {
+  try {
+    const url = new URL(imageUrl);
+    // URL path is like /container/blobName, remove leading /container/
+    // Decode URL-encoded characters (e.g., %20 -> space) for SAS signature
+    return decodeURIComponent(url.pathname.replace(`/${AZURE_STORAGE_CONTAINER}/`, ''));
+  } catch {
+    // Fallback: split by / and reconstruct from index 4 onward
+    return decodeURIComponent(imageUrl.split('/').slice(4).join('/'));
+  }
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,7 +55,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       'SELECT * FROM persona_photos WHERE persona_id = $1 ORDER BY created_at DESC',
       [id]
     );
-    return new Response(JSON.stringify(rows), { status: 200 });
+
+    // Generate fresh SAS URLs for each photo
+    const photosWithSAS = await Promise.all(
+      rows.map(async (row: { image_url: string }) => {
+        const blobName = extractBlobName(row.image_url);
+        const sasUrl = await generateSASUrl(blobName);
+        return { ...row, image_url: sasUrl };
+      })
+    );
+
+    return new Response(JSON.stringify(photosWithSAS), { status: 200 });
   } catch (error) {
     console.error('Error fetching persona photos:', error);
     return new Response(JSON.stringify({ message: 'Error fetching photos' }), { status: 500 });
@@ -21,7 +74,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
+
   try {
     // Check how many photos already exist
     const { rows: existingPhotos } = await pool.query(
@@ -58,10 +111,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER);
     const blobName = `personas/${id}/photos/${Date.now()}-${file.name}`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    
+
     const buffer = await file.arrayBuffer();
     await blockBlobClient.uploadData(buffer, { blobHTTPHeaders: { blobContentType: file.type } });
 
+    // Store raw blob URL (SAS token generated on GET)
     const imageUrl = blockBlobClient.url;
 
     // Save to database
@@ -70,7 +124,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       [id, imageUrl]
     );
 
-    return new Response(JSON.stringify(rows[0]), {
+    // Return with fresh SAS URL for immediate display
+    const sasUrl = await generateSASUrl(blobName);
+    const responseWithSAS = { ...rows[0], image_url: sasUrl };
+
+    return new Response(JSON.stringify(responseWithSAS), {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -86,7 +144,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
+
   try {
     const { entityId } = await request.json();
 

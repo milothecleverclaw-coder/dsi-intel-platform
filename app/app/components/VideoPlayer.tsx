@@ -32,7 +32,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !videoUrl) return;
 
     if (Hls.isSupported() && videoUrl.includes(".m3u8")) {
       const hls = new Hls();

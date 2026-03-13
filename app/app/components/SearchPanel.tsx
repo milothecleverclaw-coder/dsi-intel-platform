@@ -11,6 +11,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Search, FileText, Video, Pin, Eye, X, Loader2, Download, PlayCircle } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
+import { trpc } from '@/lib/trpc/react';
+import { toast } from 'sonner';
 
 interface SearchPanelProps {
   caseId: string;
@@ -32,6 +34,18 @@ interface Persona {
 }
 
 export function SearchPanel({ caseId }: SearchPanelProps) {
+  const createPin = trpc.pin.create.useMutation({
+    onSuccess: () => {
+      toast.success('สร้างหมุดสำเร็จ');
+      setPinDialogOpen(false);
+      setHighlightedText('');
+      window.getSelection()?.removeAllRanges();
+    },
+    onError: (error) => {
+      toast.error(`สร้างหมุดไม่สำเร็จ: ${error.message}`);
+    },
+  });
+
   const [docQuery, setDocQuery] = useState('');
   const [videoQuery, setVideoQuery] = useState('');
   const [docResults, setDocResults] = useState<DocumentResult[]>([]);
@@ -47,12 +61,16 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [showPinButton, setShowPinButton] = useState(false);
   
+  // SAS URL for document preview
+  const [sasLoading, setSasLoading] = useState(false);
+  const [sasUrl, setSasUrl] = useState<string | null>(null);
+  
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
-  const [pinImportance, setPinImportance] = useState('medium');
-  const [pinLoading, setPinLoading] = useState(false);
+  const [pinImportance, setPinImportance] = useState<'low' | 'medium' | 'high'>('medium');
   const [incidentDate, setIncidentDate] = useState('');
+  const [pinNotes, setPinNotes] = useState('');
 
   // Video Search Preview
   const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
@@ -92,7 +110,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
 
   // Fetch SAS URL when document preview opens
   useEffect(() => {
-    if (docPreviewOpen && selectedDoc) {
+    if (previewOpen && selectedDoc) {
       setSasLoading(true);
       setSasUrl(null);
       fetch(`/api/evidence/file/${selectedDoc.evidence_id}`)
@@ -104,10 +122,10 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         })
         .catch(err => console.error('Failed to fetch SAS URL:', err))
         .finally(() => setSasLoading(false));
-    } else if (!docPreviewOpen) {
+    } else if (!previewOpen) {
       setSasUrl(null);
     }
-  }, [docPreviewOpen, selectedDoc]);
+  }, [previewOpen, selectedDoc]);
 
   useEffect(() => {
     fetchInitialData();
@@ -221,46 +239,28 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
     setSelectedPersonas([]);
     setPinImportance('medium');
     setIncidentDate('');
+    setPinNotes('');
     setPinDialogOpen(true);
     setShowPinButton(false);
   };
 
-  const createPin = async () => {
+  const createPinHandler = async () => {
     if (!selectedDoc || !highlightedText) return;
     
-    setPinLoading(true);
-    try {
-      const res = await fetch('/api/pins', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          case_id: caseId,
-          pin_type: 'document',
-          context: highlightedText,
-          importance: pinImportance,
-          incident_date: incidentDate || null,
-          evidence_id: selectedDoc.evidence_id,
-          tagged_personas: selectedPersonas,
-          ai_context_data: {
-             original_filename: selectedDoc.filename,
-             selection_source: 'search_highlight'
-          }
-        }),
-      });
-      
-      if (res.ok) {
-        alert('สร้างหมุดสำเร็จ');
-        setPinDialogOpen(false);
-        setHighlightedText('');
-        window.getSelection()?.removeAllRanges();
-      } else {
-        alert('สร้างหมุดไม่สำเร็จ');
-      }
-    } catch (e) {
-      alert('สร้างหมุดไม่สำเร็จ');
-    } finally {
-      setPinLoading(false);
-    }
+    createPin.mutate({
+      case_id: caseId,
+      pin_type: 'document',
+      context: highlightedText,
+      importance: pinImportance,
+      incident_date: incidentDate ? new Date(incidentDate).toISOString() : null,
+      evidence_id: selectedDoc.evidence_id,
+      tagged_personas: selectedPersonas,
+      ai_context_data: {
+        original_filename: selectedDoc.filename,
+        selection_source: 'search_highlight'
+      },
+      notes: pinNotes || null,
+    });
   };
 
   return (
@@ -424,7 +424,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
           </DialogHeader>
 
           <div className="p-6 pt-0">
-            {selectedVideoResult && (
+            {selectedVideoResult && (selectedVideoResult.hls_url || selectedVideoResult.video_url) && (
               <div className="space-y-4">
                 <VideoPlayer 
                   videoUrl={selectedVideoResult.hls_url || selectedVideoResult.video_url}
@@ -469,15 +469,23 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
           </DialogHeader>
 
           <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
-              <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl mb-6">
-                <FileText className="h-24 w-24 text-blue-500 opacity-50" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-200 mb-2">{selectedDoc?.filename}</h3>
-              <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
-                <Download className="h-4 w-4 mr-2" />
-                ดาวน์โหลดไฟล์
-              </Button>
+            <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-4">
+              {sasLoading ? (
+                <div className="flex items-center justify-center h-48">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                </div>
+              ) : selectedDoc?.file_type === 'document' && sasUrl ? (
+                <iframe
+                  src={sasUrl}
+                  className="w-full h-full rounded-lg"
+                  title="PDF Preview"
+                />
+              ) : (
+                <div className="flex flex-col items-center">
+                  <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                  <p className="text-slate-400">Preview not available</p>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 flex flex-col bg-slate-900/50 relative">
@@ -541,8 +549,18 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
             </div>
 
             <div>
+              <Label className="text-xs text-slate-500 uppercase mb-2 block">หมายเหตุ (Notes)</Label>
+              <textarea
+                value={pinNotes}
+                onChange={(e) => setPinNotes(e.target.value)}
+                placeholder="เพิ่มหมายเหตุ..."
+                className="w-full h-20 p-3 bg-slate-900 border border-slate-700 rounded text-slate-50 placeholder:text-slate-600 text-sm resize-none focus:border-yellow-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
               <Label className="text-xs text-slate-500 uppercase mb-2 block">ระบุบุคคลที่เกี่ยวข้อง</Label>
-              <ScrollArea className="h-[150px] border border-slate-700 rounded bg-slate-900 p-2">
+              <ScrollArea className="h-[120px] border border-slate-700 rounded bg-slate-900 p-2">
                 <div className="space-y-2">
                   {personas.map((p) => (
                     <div 
@@ -571,8 +589,12 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setPinDialogOpen(false)} className="text-slate-400">ยกเลิก</Button>
-            <Button onClick={createPin} disabled={pinLoading} className="bg-yellow-500 text-slate-900">
-              {pinLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+            <Button 
+              onClick={createPinHandler} 
+              disabled={createPin.isPending} 
+              className="bg-yellow-500 text-slate-900"
+            >
+              {createPin.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
               บันทึกหมุด
             </Button>
           </DialogFooter>

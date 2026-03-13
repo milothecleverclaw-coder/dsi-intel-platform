@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -11,17 +11,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { trpc } from '@/lib/trpc/react';
+import { toast } from 'sonner';
 
-interface Pin {
-  pin_id: string;
-  context: string;
-  importance: string;
-  pin_type: string;
-  incident_time: string;
-  incident_date: string;
-  pinned_at: string;
-  evidence_id: string | null;
-  tagged_personas: string[];
+interface Evidence {
+  evidence_id: string;
+  filename: string;
+  display_name: string;
 }
 
 interface Persona {
@@ -30,55 +26,66 @@ interface Persona {
   last_name_th: string;
 }
 
-interface Evidence {
-  evidence_id: string;
-  filename: string;
-  display_name: string;
-}
-
 interface PinsPanelProps {
   caseId: string;
 }
 
 export function PinsPanel({ caseId }: PinsPanelProps) {
-  const [pins, setPins] = useState<Pin[]>([]);
+  // tRPC hooks
+  const { data: pins, isLoading: pinsLoading, refetch } = trpc.pin.list.useQuery({ caseId });
+  const updatePin = trpc.pin.update.useMutation({
+    onSuccess: () => {
+      toast.success('แก้ไขหมุดสำเร็จ');
+      setEditDialogOpen(false);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`แก้ไขไม่สำเร็จ: ${error.message}`);
+    },
+  });
+  const deletePin = trpc.pin.delete.useMutation({
+    onSuccess: () => {
+      toast.success('ลบหมุดสำเร็จ');
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`ลบไม่สำเร็จ: ${error.message}`);
+    },
+  });
+  
+  // Fetch evidence and personas using existing REST API (for now)
   const [evidenceMap, setEvidenceMap] = useState<Map<string, Evidence>>(new Map());
   const [personas, setPersonas] = useState<Persona[]>([]);
   
   // Edit State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingPin, setEditingPin] = useState<Pin | null>(null);
+  const [editingPinId, setEditingPinId] = useState<string | null>(null);
   const [editContext, setEditContext] = useState('');
-  const [editIncidentDate, setEditIncidentDate] = useState('');
+  const [editIncidentDate, setEditIncidentDate] = useState<string>('');
   const [editPersonas, setEditPersonas] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      const pRes = await fetch(`/api/pins?caseId=${caseId}`);
-      const pinsData = await pRes.json();
-      setPins(pinsData);
+  // Fetch evidence and personas on mount
+  useState(() => {
+    const fetchData = async () => {
+      try {
+        const evRes = await fetch(`/api/evidence?caseId=${caseId}`);
+        const evidenceData = await evRes.json();
+        const map = new Map<string, Evidence>();
+        evidenceData.forEach((e: Evidence) => map.set(e.evidence_id, e));
+        setEvidenceMap(map);
 
-      const evRes = await fetch(`/api/evidence?caseId=${caseId}`);
-      const evidenceData = await evRes.json();
-      const map = new Map<string, Evidence>();
-      evidenceData.forEach((e: Evidence) => map.set(e.evidence_id, e));
-      setEvidenceMap(map);
-
-      const perRes = await fetch(`/api/personas?caseId=${caseId}`);
-      const perData = await perRes.json();
-      setPersonas(perData);
-    } catch (e) {
-      console.error('Failed to fetch pins data:', e);
-    }
-  };
-
-  useEffect(() => {
+        const perRes = await fetch(`/api/personas?caseId=${caseId}`);
+        const perData = await perRes.json();
+        setPersonas(perData);
+      } catch (e) {
+        console.error('Failed to fetch supporting data:', e);
+      }
+    };
     fetchData();
-  }, [caseId]);
+  });
 
-  const handleEdit = (pin: Pin) => {
-    setEditingPin(pin);
+  const handleEdit = (pin: NonNullable<typeof pins>[number]) => {
+    setEditingPinId(pin.pin_id);
     setEditContext(pin.context);
     setEditIncidentDate(pin.incident_date ? new Date(pin.incident_date).toISOString().split('T')[0] : '');
     setEditPersonas(pin.tagged_personas || []);
@@ -86,45 +93,21 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
   };
 
   const saveEdit = async () => {
-    if (!editingPin) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/pins/edit?id=${editingPin.pin_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          context: editContext,
-          incident_date: editIncidentDate || null,
-          tagged_personas: editPersonas,
-        }),
-      });
-      if (res.ok) {
-        setEditDialogOpen(false);
-        fetchData();
-      } else {
-        alert('แก้ไขไม่สำเร็จ');
-      }
-    } catch (e) {
-      alert('แก้ไขไม่สำเร็จ');
-    } finally {
-      setSaving(false);
-    }
+    if (!editingPinId) return;
+    
+    updatePin.mutate({
+      pinId: editingPinId,
+      data: {
+        context: editContext,
+        incident_date: editIncidentDate ? new Date(editIncidentDate).toISOString() : null,
+        tagged_personas: editPersonas,
+      },
+    });
   };
 
-  const handleDelete = async (pinId: string) => {
+  const handleDelete = (pinId: string) => {
     if (!confirm('ยืนยันการลบหมุดนี้?')) return;
-    try {
-      const res = await fetch(`/api/pins/edit?id=${pinId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        fetchData();
-      } else {
-        alert('ลบไม่สำเร็จ');
-      }
-    } catch (e) {
-      alert('ลบไม่สำเร็จ');
-    }
+    deletePin.mutate({ pinId });
   };
 
   const getImportanceColor = (level: string) => {
@@ -170,12 +153,23 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
     );
   };
 
+  if (pinsLoading) {
+    return (
+      <Card className="bg-slate-800 border-slate-700">
+        <CardContent className="py-8 text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-yellow-500" />
+          <p className="mt-2 text-slate-500">กำลังโหลดหมุด...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-slate-800 border-slate-700">
       <CardHeader className="pb-3">
         <CardTitle className="text-base text-slate-50 flex items-center gap-2">
           <Pin className="h-5 w-5 text-yellow-300" />
-          หมุดสำคัญ <span className="text-slate-500 font-normal">{pins.length} รายการ</span>
+          หมุดสำคัญ <span className="text-slate-500 font-normal">{pins?.length ?? 0} รายการ</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -188,11 +182,12 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ที่มา</TableHead>
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">ความสำคัญ</TableHead>
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide">วันที่เกิดเหตุ</TableHead>
+              <TableHead className="text-slate-400 uppercase text-xs tracking-wide">หมายเหตุ</TableHead>
               <TableHead className="text-slate-400 uppercase text-xs tracking-wide text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pins.map((pin) => (
+            {pins?.map((pin) => (
               <TableRow key={pin.pin_id} className="border-slate-700/50 hover:bg-slate-800/50">
                 <TableCell className="font-mono font-bold text-slate-50">{pin.pin_id}</TableCell>
                 <TableCell>
@@ -211,6 +206,7 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
                 <TableCell className="text-slate-400">
                   {pin.incident_date ? new Date(pin.incident_date).toLocaleDateString('th-TH') : '-'}
                 </TableCell>
+                <TableCell className="max-w-xs truncate text-slate-300">{pin.notes || '-'}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button 
@@ -233,7 +229,7 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
                 </TableCell>
               </TableRow>
             ))}
-            {pins.length === 0 && (
+            {pins?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-slate-500 py-8">
                   <Pin className="h-8 w-8 mx-auto mb-2 text-slate-600" />
@@ -251,7 +247,7 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
                <Edit className="h-5 w-5 text-yellow-500" />
-               แก้ไขหมุด {editingPin?.pin_id}
+               แก้ไขหมุด {editingPinId}
             </DialogTitle>
             <DialogDescription className="text-slate-400">
               แก้ไขข้อมูลของหมุดที่เลือก
@@ -309,8 +305,12 @@ export function PinsPanel({ caseId }: PinsPanelProps) {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditDialogOpen(false)} className="text-slate-400">ยกเลิก</Button>
-            <Button onClick={saveEdit} disabled={saving} className="bg-yellow-500 text-slate-900">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+            <Button 
+              onClick={saveEdit} 
+              disabled={updatePin.isPending} 
+              className="bg-yellow-500 text-slate-900"
+            >
+              {updatePin.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
               บันทึกการแก้ไข
             </Button>
           </DialogFooter>

@@ -31,12 +31,12 @@ export async function POST(request: Request) {
             pin_type, 
             timestamp_start, 
             timestamp_end, 
-            incident_time, 
-            incident_date,
+            incident_time,
             context, 
             importance, 
             tagged_personas, 
-            ai_context_data 
+            ai_context_data,
+            notes
         } = await request.json();
 
         if (!case_id) {
@@ -52,8 +52,8 @@ export async function POST(request: Request) {
         const pin_id = `P${seqNum.toString().padStart(3, '0')}`;
 
         const { rows } = await pool.query(
-            `INSERT INTO pins (pin_id, case_id, evidence_id, pin_type, timestamp_start, timestamp_end, incident_time, incident_date, context, importance, tagged_personas, ai_context_data) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-            [pin_id, case_id, evidence_id, pin_type, timestamp_start, timestamp_end, incident_time, incident_date, context, importance, tagged_personas, ai_context_data]
+            `INSERT INTO pins (pin_id, case_id, evidence_id, pin_type, timestamp_start, timestamp_end, incident_time, context, importance, tagged_personas, ai_context_data, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [pin_id, case_id, evidence_id, pin_type, timestamp_start, timestamp_end, incident_time, context, importance, tagged_personas, ai_context_data, notes]
         );
 
         return new Response(JSON.stringify(rows[0]), {

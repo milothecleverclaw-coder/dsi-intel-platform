@@ -53,6 +53,7 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
 
   // Saved evidence view states
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
@@ -115,6 +116,13 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
       setPreviewError('ไฟล์ประเภทนี้ไม่รองรับการแสดงตัวอย่าง (รองรับเฉพาะ PDF, Word, Text, รูปภาพ)');
       setPreviewOpen(true);
       return;
+    }
+
+    // Create local URL for PDF preview
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      setPreviewFileUrl(URL.createObjectURL(file));
+    } else {
+      setPreviewFileUrl(null);
     }
 
     setPreviewLoading(true);
@@ -331,59 +339,43 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
           <div className="flex-1 flex overflow-hidden">
             {/* Left Pane: Raw content / Placeholder */}
             <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
-              <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl mb-6 w-full max-w-2xl">
-                {sasLoading ? (
-                  <div className="flex items-center justify-center h-48">
-                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                  </div>
-                ) : selectedEvidence?.file_type === 'video' ? (
-                  <VideoPlayer 
-                    videoUrl={sasUrl || ''}
+              {sasLoading ? (
+                <div className="flex items-center justify-center h-48">
+                  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                </div>
+              ) : selectedEvidence?.file_type === 'video' ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <VideoPlayer videoUrl={sasUrl || ''} />
+                </div>
+              ) : selectedEvidence?.file_type === 'image' ? (
+                sasUrl ? (
+                  <img 
+                    src={sasUrl} 
+                    alt={selectedEvidence.filename}
+                    className="max-h-full max-w-full object-contain rounded-lg"
                   />
-                ) : selectedEvidence?.file_type === 'image' ? (
-                  sasUrl ? (
-                    <img 
-                      src={sasUrl} 
-                      alt={selectedEvidence.filename}
-                      className="max-h-96 max-w-full object-contain mx-auto rounded-lg"
-                    />
-                  ) : (
-                    <Image className="h-24 w-24 text-green-500 opacity-50 mx-auto" />
-                  )
                 ) : (
-                  <FileText className="h-24 w-24 text-blue-500 opacity-50 mx-auto" />
-                )}
-              </div>
-              <h3 className="text-lg font-medium text-slate-200 mb-2">{selectedEvidence?.filename}</h3>
-              {selectedEvidence?.file_type === 'video' && (
-                <div className="mb-6 flex flex-col items-center gap-2">
-                  <Badge className={`
-                    ${selectedEvidence.twelve_labs_status === 'ready' ? 'bg-green-900/30 text-green-400' : 
-                      selectedEvidence.twelve_labs_status === 'failed' ? 'bg-red-900/30 text-red-400' : 
-                      'bg-yellow-900/30 text-yellow-400'} border border-current
-                  `}>
-                    Twelve Labs: {selectedEvidence.twelve_labs_status || 'pending'}
-                  </Badge>
-                  {selectedEvidence.twelve_labs_status !== 'ready' && (
-                    <p className="text-[10px] text-slate-500">Indexing video for AI search...</p>
-                  )}
+                  <Image className="h-24 w-24 text-green-500 opacity-50" />
+                )
+              ) : selectedEvidence?.file_type === 'document' ? (
+                sasUrl ? (
+                  <iframe
+                    src={sasUrl}
+                    className="w-full h-full rounded-lg"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                    <p className="text-slate-400">Loading document...</p>
+                  </div>
+                )
+              ) : (
+                <div className="flex flex-col items-center">
+                  <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                  <p className="text-slate-400">Preview not available</p>
                 </div>
               )}
-              <p className="text-slate-500 max-w-xs mb-6">
-                {selectedEvidence?.file_type === 'video' 
-                  ? 'วิดีโอถูกโหลดจาก Azure Blob Storage และพร้อมใช้งานสำหรับการวิเคราะห์'
-                  : 'ตัวอย่างไฟล์ต้นฉบับยังไม่สามารถแสดงผลได้ในส่วนนี้ แต่คุณสามารถดาวน์โหลดเพื่อดูไฟล์เต็มได้'}
-              </p>
-              <Button 
-                variant="outline" 
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
-                onClick={() => {
-                   alert('ดาวน์โหลดไฟล์: ' + selectedEvidence?.filename);
-                }}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                ดาวน์โหลดไฟล์
-              </Button>
             </div>
 
             {/* Right Pane: Extracted Text */}
@@ -413,73 +405,173 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
 
       {/* Upload Preview Dialog (The one used during upload) */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] bg-slate-800 border-slate-700 text-slate-50">
-          <DialogHeader>
-            <DialogTitle className="text-slate-50 flex items-center gap-2">
-              <Eye className="h-5 w-5 text-yellow-500" />
-              ตัวอย่างผลลัพธ์
-            </DialogTitle>
-            <DialogDescription className="text-slate-400">
-              {previewResult?.filename || 'กำลังโหลด...'}
-            </DialogDescription>
+        <DialogContent className="max-w-6xl w-[95vw] h-[90vh] bg-slate-800 border-slate-700 text-slate-50 p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-6 pb-2 border-b border-slate-700">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-xl text-slate-50 flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-yellow-500" />
+                  ตัวอย่างเอกสาร
+                </DialogTitle>
+                <DialogDescription className="text-slate-400 mt-1">
+                  {previewResult?.filename || file?.name || 'กำลังโหลด...'}
+                </DialogDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setPreviewOpen(false)}
+                className="text-slate-400 hover:text-slate-50"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </DialogHeader>
 
-          {previewLoading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mb-4" />
-              <p className="text-slate-400">กำลังวิเคราะห์เอกสาร...</p>
-            </div>
-          )}
-
-          {previewError && (
-            <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
-              <p className="text-red-400">{previewError}</p>
-            </div>
-          )}
-
-          {previewResult && (
-            <div className="space-y-4">
-              <div className="flex gap-4 text-sm">
-                <Badge variant="outline" className="border-slate-600 text-slate-300">
-                  {previewResult.pages.length} หน้า
-                </Badge>
-                <Badge variant="outline" className="border-slate-600 text-slate-300">
-                  {previewResult.wordCount.toLocaleString()} คำ
-                </Badge>
-                <Badge variant="outline" className="border-slate-600 text-slate-300">
-                  {previewResult.characterCount.toLocaleString()} ตัวอักษร
-                </Badge>
+          {previewLoading && !previewResult && !previewError && (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Pane: PDF Preview (shows immediately) */}
+              <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-4">
+                {previewFileUrl && (file?.type === 'application/pdf' || file?.name?.endsWith('.pdf')) ? (
+                  <iframe
+                    src={previewFileUrl}
+                    className="w-full h-full rounded-lg"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                    <p className="text-slate-400">Preview not available for this file type</p>
+                  </div>
+                )}
               </div>
 
-              <ScrollArea className="h-[400px] border border-slate-700 rounded-lg bg-slate-900/50">
-                <div className="p-4">
-                  <h4 className="text-sm font-semibold text-slate-300 mb-3">ข้อความที่สกัดได้:</h4>
-                  <div className="text-slate-400 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-                    {previewResult.extractedText || 'ไม่พบข้อความในเอกสาร'}
+              {/* Right Pane: Loading */}
+              <div className="flex-1 flex flex-col bg-slate-900/50">
+                <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-slate-300 uppercase tracking-wider">ข้อความที่สกัดได้ (Extracted Text)</span>
+                  <Badge variant="outline" className="border-yellow-600/30 text-yellow-500 text-[10px]">
+                    PROCESSING...
+                  </Badge>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-yellow-500 mb-4" />
+                    <p className="text-slate-400">กำลังวิเคราะห์เอกสาร...</p>
                   </div>
                 </div>
-              </ScrollArea>
-
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-700">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setPreviewOpen(false)}
-                  className="text-slate-400 hover:text-slate-50"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  ปิด
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setPreviewOpen(false);
-                    upload(previewResult.extractedText);
-                  }}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                >
-                  <Upload className="h-4 w-4 mr-1" />
-                  บันทึก
-                </Button>
               </div>
+            </div>
+          )}
+
+          {previewError && !previewLoading && (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Pane: PDF Preview (still shows on error) */}
+              <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-4">
+                {previewFileUrl && (file?.type === 'application/pdf' || file?.name?.endsWith('.pdf')) ? (
+                  <iframe
+                    src={previewFileUrl}
+                    className="w-full h-full rounded-lg"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                    <p className="text-slate-400">Preview not available for this file type</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Pane: Error */}
+              <div className="flex-1 flex flex-col bg-slate-900/50">
+                <div className="p-4 border-b border-slate-700 bg-slate-800/50">
+                  <span className="text-sm font-semibold text-slate-300 uppercase tracking-wider">ข้อความที่สกัดได้ (Extracted Text)</span>
+                </div>
+                <div className="flex-1 flex items-center justify-center p-8">
+                  <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg">
+                    <p className="text-red-400">{previewError}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {previewError && !previewLoading && (
+            <div className="p-4 border-t border-slate-700 flex justify-end">
+              <Button 
+                variant="ghost" 
+                onClick={() => setPreviewOpen(false)}
+                className="text-slate-400 hover:text-slate-50"
+              >
+                <X className="h-4 w-4 mr-1" />
+                ปิด
+              </Button>
+            </div>
+          )}
+
+          {previewResult && !previewLoading && !previewError && (
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Pane: PDF Preview */}
+              <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-4">
+                {previewFileUrl && (file?.type === 'application/pdf' || file?.name?.endsWith('.pdf')) ? (
+                  <iframe
+                    src={previewFileUrl}
+                    className="w-full h-full rounded-lg"
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <FileText className="h-24 w-24 text-blue-500 opacity-50 mb-4" />
+                    <p className="text-slate-400">Preview not available for this file type</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Pane: Extracted Text */}
+              <div className="flex-1 flex flex-col bg-slate-900/50">
+                <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                  <span className="text-sm font-semibold text-slate-300 uppercase tracking-wider">ข้อความที่สกัดได้ (Extracted Text)</span>
+                  <div className="flex gap-2 text-xs">
+                    <Badge variant="outline" className="border-slate-600 text-slate-300">
+                      {previewResult.pages?.length || 0} หน้า
+                    </Badge>
+                    <Badge variant="outline" className="border-slate-600 text-slate-300">
+                      {previewResult.wordCount?.toLocaleString() || 0} คำ
+                    </Badge>
+                    <Badge variant="outline" className="border-slate-600 text-slate-300">
+                      {previewResult.characterCount?.toLocaleString() || 0} ตัวอักษร
+                    </Badge>
+                  </div>
+                </div>
+                <ScrollArea className="flex-1 p-6">
+                  <div className="text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+                    {previewResult.extractedText || 'ไม่พบข้อความในเอกสาร'}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+
+          {previewResult && !previewLoading && !previewError && (
+            <div className="p-4 border-t border-slate-700 flex justify-end gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={() => setPreviewOpen(false)}
+                className="text-slate-400 hover:text-slate-50"
+              >
+                <X className="h-4 w-4 mr-1" />
+                ปิด
+              </Button>
+              <Button 
+                onClick={() => {
+                  setPreviewOpen(false);
+                  upload(previewResult.extractedText);
+                }}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                บันทึก
+              </Button>
             </div>
           )}
         </DialogContent>
