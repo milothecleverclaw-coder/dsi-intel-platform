@@ -36,6 +36,8 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   const [videoQuery, setVideoQuery] = useState('');
   const [docResults, setDocResults] = useState<DocumentResult[]>([]);
   const [videoResults, setVideoResults] = useState<any[]>([]);
+  const [allVideos, setAllVideos] = useState<any[]>([]);
+  const [caseIndexId, setCaseIndexId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -61,6 +63,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   const fetchInitialData = useCallback(async () => {
     setInitialLoading(true);
     try {
+      // Fetch documents
       const res = await fetch(`/api/evidence?caseId=${caseId}`);
       const data = await res.json();
       const docs = data.filter((e: any) => e.file_type === 'document' || e.file_type === 'image');
@@ -69,6 +72,14 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
         text: d.extracted_text ? d.extracted_text.substring(0, 200) + '...' : 'ไม่มีข้อมูลข้อความ'
       })));
 
+      // Fetch videos
+      const videosRes = await fetch(`/api/videos/list?caseId=${caseId}`);
+      const videosData = await videosRes.json();
+      setAllVideos(videosData.videos || []);
+      setCaseIndexId(videosData.indexId || '67cb95a34ec81165a6b0938b');
+      setVideoResults(videosData.videos || []);
+
+      // Fetch personas
       const pRes = await fetch(`/api/personas?caseId=${caseId}`);
       const pData = await pRes.json();
       setPersonas(pData);
@@ -105,15 +116,23 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   };
 
   const searchVideos = async () => {
-    if (!videoQuery) return;
+    // If no query, show all videos
+    if (!videoQuery) {
+      setVideoResults(allVideos);
+      return;
+    }
+    
+    if (!caseIndexId) {
+      alert('Video index not configured for this case');
+      return;
+    }
+    
     setLoading(true);
     try {
-      // For now we use the hardcoded indexId from the reference or first available
-      // In a real app, this would be the case's Twelve Labs Index ID
       const res = await fetch('/api/search/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ indexId: '67cb95a34ec81165a6b0938b', query: videoQuery }),
+        body: JSON.stringify({ indexId: caseIndexId, query: videoQuery }),
       });
       const data = await res.json();
       

@@ -9,17 +9,18 @@ export async function POST(request: Request) {
             return new Response(JSON.stringify({ message: 'query and indexId required' }), { status: 400 });
         }
 
+        // Twelve Labs API requires multipart/form-data for search
+        const formData = new FormData();
+        formData.append('query', query);
+        formData.append('index_id', indexId);
+        formData.append('search_options', JSON.stringify(['visual', 'conversation', 'text_in_video', 'logo']));
+
         const response = await fetch(`${TWELVE_LABS_BASE_URL}/search`, {
             method: 'POST',
             headers: {
                 'x-api-key': TWELVE_LABS_API_KEY,
-                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                query,
-                index_id: indexId,
-                search_options: ['visual', 'conversation', 'text_in_video', 'logo'],
-            }),
+            body: formData,
         });
 
         if (!response.ok) {
