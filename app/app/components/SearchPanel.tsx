@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Search, FileText, Video, Pin, Eye, X, Loader2, Download } from 'lucide-react';
+import { Search, FileText, Video, Pin, Eye, X, Loader2, Download, PlayCircle } from 'lucide-react';
+import VideoPlayer from './VideoPlayer';
 
 interface SearchPanelProps {
   caseId: string;
@@ -50,6 +51,10 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
   const [pinImportance, setPinImportance] = useState('medium');
   const [pinLoading, setPinLoading] = useState(false);
   const [incidentDate, setIncidentDate] = useState('');
+
+  // Video Search Preview
+  const [videoPreviewOpen, setVideoPreviewOpen] = useState(false);
+  const [selectedVideoResult, setSelectedVideoResult] = useState<any>(null);
 
   const textRef = useRef<HTMLDivElement>(null);
 
@@ -103,13 +108,31 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
     if (!videoQuery) return;
     setLoading(true);
     try {
+      // For now we use the hardcoded indexId from the reference or first available
+      // In a real app, this would be the case's Twelve Labs Index ID
       const res = await fetch('/api/search/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ caseId, query: videoQuery }),
+        body: JSON.stringify({ indexId: '67cb95a34ec81165a6b0938b', query: videoQuery }),
       });
       const data = await res.json();
-      setVideoResults(data.data || []);
+      
+      // Map Twelve Labs results to our UI format
+      const results = data.data?.map((item: any) => ({
+        video_id: item.video_id,
+        start: item.start,
+        end: item.end,
+        score: item.score,
+        thumbnail_url: item.thumbnail_url,
+        hls_url: item.hls?.url,
+        video_url: `https://dsiintelplatform.blob.core.windows.net/evidence/${caseId}/${item.video_id}`, // Fallback
+        metadata: {
+          text: item.metadata?.find((m: any) => m.type === 'text_in_video')?.value || 
+                item.metadata?.find((m: any) => m.type === 'conversation')?.value
+        }
+      })) || [];
+      
+      setVideoResults(results);
     } catch (e) {
       alert('ค้นหาไม่สำเร็จ');
     } finally {
@@ -306,8 +329,82 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
               </div>
             </CardContent>
           </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {videoResults.map((result, i) => (
+              <Card 
+                key={i} 
+                className="bg-slate-800 border-slate-700 hover:border-orange-500/50 transition-all cursor-pointer group overflow-hidden"
+                onClick={() => {
+                  setSelectedVideoResult(result);
+                  setVideoPreviewOpen(true);
+                }}
+              >
+                <div className="aspect-video relative bg-slate-900">
+                   <img 
+                     src={result.thumbnail_url} 
+                     alt="Video segment" 
+                     className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                   />
+                   <div className="absolute inset-0 flex items-center justify-center">
+                     <PlayCircle className="h-12 w-12 text-white/50 group-hover:text-orange-500 transition-colors" />
+                   </div>
+                   <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 rounded text-[10px] text-white font-mono">
+                     {Math.floor(result.start / 60).toString().padStart(2, '0')}:{(result.start % 60).toString().padStart(2, '0')} - {Math.floor(result.end / 60).toString().padStart(2, '0')}:{(result.end % 60).toString().padStart(2, '0')}
+                   </div>
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-xs text-slate-500 truncate max-w-[200px]">
+                      {result.video_id}
+                    </p>
+                    <Badge variant="outline" className="text-[10px] border-orange-500/30 text-orange-400">
+                      MATCH: {Math.round(result.score)}%
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-300 line-clamp-2 italic">
+                    {result.metadata?.text || 'พบช่วงเวลาที่ตรงกับการค้นหา'}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Video Preview Dialog */}
+      <Dialog open={videoPreviewOpen} onOpenChange={setVideoPreviewOpen}>
+        <DialogContent className="max-w-4xl bg-slate-800 border-slate-700 text-slate-50 p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-orange-500" />
+              ผลการค้นหาวิดีโอ
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {selectedVideoResult?.video_id}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 pt-0">
+            {selectedVideoResult && (
+              <div className="space-y-4">
+                <VideoPlayer 
+                  videoUrl={selectedVideoResult.hls_url || selectedVideoResult.video_url}
+                  highlights={[{ start: selectedVideoResult.start, end: selectedVideoResult.end }]}
+                  autoPlay={true}
+                />
+                
+                <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider">Context</h4>
+                  <p className="text-slate-300 text-sm">
+                    {selectedVideoResult.metadata?.text || 'พบช่วงเวลาที่เกี่ยวข้องในช่วงนาทีที่ ' + Math.floor(selectedVideoResult.start/60) + ':' + (selectedVideoResult.start%60).toString().padStart(2, '0')}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-6xl w-[95vw] h-[90vh] bg-slate-800 border-slate-700 text-slate-50 p-0 overflow-hidden flex flex-col">

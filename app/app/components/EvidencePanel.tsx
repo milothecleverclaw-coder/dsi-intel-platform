@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, FileText, Video, Image, Music, File, Eye, X, Loader2, Download } from 'lucide-react';
+import { Upload, FileText, Video, Image, Music, File, Eye, X, Loader2, Download, AlertCircle } from 'lucide-react';
+import VideoPlayer from './VideoPlayer';
 
 interface Evidence {
   evidence_id: string;
@@ -19,6 +20,10 @@ interface Evidence {
   uploaded_at: string;
   blob_path: string;
   extracted_text?: string;
+  twelve_labs_task_id?: string;
+  twelve_labs_index_id?: string;
+  twelve_labs_video_id?: string;
+  twelve_labs_status?: string;
 }
 
 interface EvidencePanelProps {
@@ -132,10 +137,8 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
   };
 
   const openSavedPreview = (ev: Evidence) => {
-    if (ev.file_type === 'document' || ev.file_type === 'image') {
-      setSelectedEvidence(ev);
-      setSavedPreviewOpen(true);
-    }
+    setSelectedEvidence(ev);
+    setSavedPreviewOpen(true);
   };
 
   const getFileIcon = (type: string) => {
@@ -301,16 +304,36 @@ export function EvidencePanel({ caseId }: EvidencePanelProps) {
           <div className="flex-1 flex overflow-hidden">
             {/* Left Pane: Raw content / Placeholder */}
             <div className="flex-1 border-r border-slate-700 bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
-              <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl mb-6">
-                {selectedEvidence?.file_type === 'image' ? (
-                  <Image className="h-24 w-24 text-green-500 opacity-50" />
+              <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl mb-6 w-full max-w-2xl">
+                {selectedEvidence?.file_type === 'video' ? (
+                  <VideoPlayer 
+                    videoUrl={`https://dsiintelplatform.blob.core.windows.net/evidence/${selectedEvidence.blob_path}`}
+                  />
+                ) : selectedEvidence?.file_type === 'image' ? (
+                  <Image className="h-24 w-24 text-green-500 opacity-50 mx-auto" />
                 ) : (
-                  <FileText className="h-24 w-24 text-blue-500 opacity-50" />
+                  <FileText className="h-24 w-24 text-blue-500 opacity-50 mx-auto" />
                 )}
               </div>
               <h3 className="text-lg font-medium text-slate-200 mb-2">{selectedEvidence?.filename}</h3>
+              {selectedEvidence?.file_type === 'video' && (
+                <div className="mb-6 flex flex-col items-center gap-2">
+                  <Badge className={`
+                    ${selectedEvidence.twelve_labs_status === 'ready' ? 'bg-green-900/30 text-green-400' : 
+                      selectedEvidence.twelve_labs_status === 'failed' ? 'bg-red-900/30 text-red-400' : 
+                      'bg-yellow-900/30 text-yellow-400'} border border-current
+                  `}>
+                    Twelve Labs: {selectedEvidence.twelve_labs_status || 'pending'}
+                  </Badge>
+                  {selectedEvidence.twelve_labs_status !== 'ready' && (
+                    <p className="text-[10px] text-slate-500">Indexing video for AI search...</p>
+                  )}
+                </div>
+              )}
               <p className="text-slate-500 max-w-xs mb-6">
-                ตัวอย่างไฟล์ต้นฉบับยังไม่สามารถแสดงผลได้ในส่วนนี้ แต่คุณสามารถดาวน์โหลดเพื่อดูไฟล์เต็มได้
+                {selectedEvidence?.file_type === 'video' 
+                  ? 'วิดีโอถูกโหลดจาก Azure Blob Storage และพร้อมใช้งานสำหรับการวิเคราะห์'
+                  : 'ตัวอย่างไฟล์ต้นฉบับยังไม่สามารถแสดงผลได้ในส่วนนี้ แต่คุณสามารถดาวน์โหลดเพื่อดูไฟล์เต็มได้'}
               </p>
               <Button 
                 variant="outline" 
