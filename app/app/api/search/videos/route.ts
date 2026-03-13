@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
         // Twelve Labs API requires multipart/form-data for search
         const formData = new FormData();
-        formData.append('query', query);
+        formData.append('query_text', query);
         formData.append('index_id', indexId);
         formData.append('search_options', JSON.stringify(['visual', 'conversation', 'text_in_video', 'logo']));
 

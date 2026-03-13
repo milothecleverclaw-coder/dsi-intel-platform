@@ -76,7 +76,7 @@ export function SearchPanel({ caseId }: SearchPanelProps) {
       const videosRes = await fetch(`/api/videos/list?caseId=${caseId}`);
       const videosData = await videosRes.json();
       setAllVideos(videosData.videos || []);
-      setCaseIndexId(videosData.indexId || '67cb95a34ec81165a6b0938b');
+      setCaseIndexId(videosData.indexId || null);
       setVideoResults(videosData.videos || []);
 
       // Fetch personas
