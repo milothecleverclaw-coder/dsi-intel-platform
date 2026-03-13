@@ -1,61 +1,100 @@
-# DSI Intelligence Platform
+# DSI Intel Platform
 
-> 🕵️ **ระบบวิเคราะห์ข้อมูลสืบสวน - กรมสอบสวนคดีพิเศษ**
-> 
-> Demo application for DSI case investigation and intelligence analysis
+Investigation case management and intelligence analysis platform for DSI.
 
-## 🎯 Features
+## Repository Structure
 
-- **📁 ไฟล์ (Files)** - จัดการไฟล์หลักฐาน (วิดีโอ, เสียง, เอกสาร, ภาพ)
-- **👤 ตัวละคร (Characters)** - จัดการข้อมูลบุคคลที่เกี่ยวข้อง
-- **🕸️ แผนภาพ (Diagram)** - แสดงความสัมพันธ์แบบโครงข่าย
-- **💬 แชท (Chat)** - สอบถามข้อมูลจาก AI ผู้ช่วยสืบสวน
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
+```
+/app        ← Production Next.js application (start here)
+/mock       ← Static prototype/demo (reference only, not runnable in prod)
+/docs       ← Feature specs and design documents
 ```
 
-## 📋 Demo Scenario
+## Running the App (`/app`)
 
-**Operation Black Lotus (ดอกบัวดำ)** - คดีฉ้อโกงเงินทุนสาธารณะและฟอกเงิน
+### Prerequisites
 
-### ตัวละคร
-| ชื่อ | นามแฝง | บทบาท |
-|-----|--------|-------|
-| สมชาย ศรีวิจิตร | พ่อใหญ่ | ผู้บงการหลัก |
-| วิไล มั่งมี | นายหญิง | ธุรการเงิน |
-| ธนกร เงินทอง | เด็ก | คนขับขนเงิน |
-| อรุณ แสงสว่าง | - | ทนายความ |
-| นพ.กิตติ ศักดิ์สิทธิ์ | หมอ | ช่องทางฟอกเงิน |
+- Node.js 20+
+- PM2 (`npm install -g pm2`)
+- `.env.local` configured in `/app` (see Environment Variables below)
 
-### ไฟล์หลักฐาน
-- 📹 วิดีโอ: 3 ไฟล์
-- 🎤 เสียง: 2 ไฟล์ (พร้อมถอดความ)
-- 📄 เอกสาร: 2 ไฟล์
-- 🖼️ ภาพ: 1 ไฟล์
+### First-time setup
 
-## 🛠️ Tech Stack
+```bash
+cd app
+npm install
+npm run build
+pm2 start npm --name "dsi" -- start
+pm2 save
+```
 
-- **Frontend:** React + Vite
-- **Styling:** Tailwind CSS
-- **Icons:** Lucide React
-- **Theme:** Dark mode FBI-style
+### PM2 Commands
 
-## 📝 Notes
+| Action | Command |
+|--------|---------|
+| Start | `pm2 start npm --name "dsi" -- start` |
+| Stop | `pm2 stop dsi` |
+| Restart | `pm2 restart dsi` |
+| Reload (zero-downtime) | `pm2 reload dsi` |
+| View logs | `pm2 logs dsi` |
+| Status | `pm2 status` |
 
-- นี่เป็น **Demo App** ใช้ข้อมูลจำลองทั้งหมด
-- ออกแบบให้มีหน้าตาคล้ายระบบสืบสวนของหน่วยงานจริง
-- รองรับภาษาไทยทั้งหมด
+### Rebuild & Redeploy
 
----
+After pulling new changes:
 
-🔒 **CLASSIFIED - DSI INTERNAL USE ONLY**
+```bash
+cd app
+npm install          # install any new deps
+npm run build        # rebuild Next.js
+pm2 reload dsi       # zero-downtime reload
+```
+
+Or full restart:
+
+```bash
+cd app
+npm run build
+pm2 stop dsi && pm2 start npm --name "dsi" -- start
+```
+
+### Default Port
+
+Runs on **port 3000** by default. Override with:
+
+```bash
+PORT=8080 pm2 start npm --name "dsi" -- start
+```
+
+## Environment Variables
+
+Create `/app/.env.local`:
+
+```env
+# Database
+DATABASE_URL=
+
+# Azure Blob Storage
+AZURE_STORAGE_CONNECTION_STRING=
+AZURE_STORAGE_CONTAINER_NAME=
+
+# Azure Form Recognizer
+AZURE_FORM_RECOGNIZER_ENDPOINT=
+AZURE_FORM_RECOGNIZER_KEY=
+
+# OpenAI / AI
+OPENAI_API_KEY=
+
+# Twelve Labs (video analysis)
+TWELVE_LABS_API_KEY=
+TWELVE_LABS_INDEX_ID=
+```
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **UI**: React 19, Tailwind CSS, shadcn/ui
+- **Database**: PostgreSQL (Neon serverless)
+- **Storage**: Azure Blob Storage
+- **AI**: OpenAI, Twelve Labs (video intelligence)
+- **OCR**: Azure Form Recognizer
