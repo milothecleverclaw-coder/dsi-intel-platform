@@ -649,7 +649,8 @@ describe('Pins API', () => {
                     'Test context',
                     'medium',
                     ['p1'],
-                    { key: 'value' }
+                    { key: 'value' },
+                    undefined
                 ]
             );
         });

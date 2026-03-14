@@ -1,31 +1,8 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
-import { GET, POST, PATCH, DELETE } from './route';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env.local manually
-function loadEnv() {
-    const envPath = path.resolve(__dirname, '../../../../../.env.local');
-    if (fs.existsSync(envPath)) {
-        const content = fs.readFileSync(envPath, 'utf-8');
-        for (const line of content.split('\n')) {
-            const trimmed = line.trim();
-            if (trimmed && !trimmed.startsWith('#')) {
-                const [key, ...valueParts] = trimmed.split('=');
-                const value = valueParts.join('=');
-                if (key && value !== undefined) {
-                    process.env[key] = value;
-                }
-            }
-        }
-    }
-}
-
-loadEnv();
+// Set env vars BEFORE any imports
+process.env.AZURE_STORAGE_CONNECTION_STRING = 'DefaultEndpointsProtocol=https;AccountName=testaccount;AccountKey=dGVzdGtleQ==;EndpointSuffix=core.windows.net';
+process.env.AZURE_STORAGE_CONTAINER = 'evidence';
 
 // Mock the database pool
 vi.mock('@/lib/db', () => ({
@@ -47,20 +24,57 @@ vi.mock('@azure/storage-blob', () => {
           })
         })
       })
-    }
+    },
+    StorageSharedKeyCredential: class MockStorageSharedKeyCredential {
+      accountName: string;
+      accountKey: string;
+      constructor(accountName: string, accountKey: string) {
+        this.accountName = accountName;
+        this.accountKey = accountKey;
+      }
+    },
+    BlobSASPermissions: {
+      parse: vi.fn().mockReturnValue('r')
+    },
+    generateBlobSASQueryParameters: vi.fn().mockReturnValue({
+      toString: vi.fn().mockReturnValue('se=2024-01-01&sp=r&sig=testsignature')
+    })
   };
 });
 
+// Import pool after mocks
 import pool from '@/lib/db';
+
+// Type for the route handlers
+interface RouteHandlers {
+  GET: (request: Request, context: { params: Promise<{ id: string }> }) => Promise<Response>;
+  POST: (request: Request, context: { params: Promise<{ id: string }> }) => Promise<Response>;
+  PATCH: (request: Request, context: { params: Promise<{ id: string }> }) => Promise<Response>;
+  DELETE: (request: Request, context: { params: Promise<{ id: string }> }) => Promise<Response>;
+}
+
+// Use dynamic import to ensure env vars are set before route module loads
+let GET: RouteHandlers['GET'];
+let POST: RouteHandlers['POST'];
+let PATCH: RouteHandlers['PATCH'];
+let DELETE: RouteHandlers['DELETE'];
+
+beforeAll(async () => {
+  const route = await import('./route.js');
+  GET = route.GET;
+  POST = route.POST;
+  PATCH = route.PATCH;
+  DELETE = route.DELETE;
+});
 
 describe('Persona Photos API', () => {
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('GET', () => {
         it('should return 200 and photos for a valid persona ID', async () => {
-            const mockPhotos = [{ photo_id: 'p1', image_url: 'url1' }];
+            const mockPhotos = [{ photo_id: 'p1', image_url: 'https://test.blob.core.windows.net/evidence/personas/pers-123/photos/1234567890-test.jpg' }];
             vi.mocked(pool.query).mockResolvedValueOnce({ rows: mockPhotos } as any);
 
             const params = Promise.resolve({ id: 'pers-123' });
@@ -87,7 +101,7 @@ describe('Persona Photos API', () => {
         it('should return 201 when photo is uploaded successfully', async () => {
             vi.mocked(pool.query)
                 .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any) // count check
-                .mockResolvedValueOnce({ rows: [{ photo_id: 'new-p1', image_url: 'url' }] } as any); // insert
+                .mockResolvedValueOnce({ rows: [{ photo_id: 'new-p1', image_url: 'https://test.blob.core.windows.net/evidence/personas/pers-123/photos/1234567890-test.jpg' }] } as any); // insert
 
             const formData = new FormData();
             const file = new File(['dummy content'], 'test.jpg', { type: 'image/jpeg' });
@@ -127,7 +141,7 @@ describe('Persona Photos API', () => {
 
     describe('DELETE', () => {
         it('should return 200 and delete photo', async () => {
-            const mockPhoto = { photo_id: 'p1', image_url: 'https://test.com/evidence/p1.jpg' };
+            const mockPhoto = { photo_id: 'p1', image_url: 'https://test.blob.core.windows.net/evidence/personas/pers-123/photos/1234567890-test.jpg' };
             vi.mocked(pool.query)
                 .mockResolvedValueOnce({ rows: [mockPhoto] } as any) // select check
                 .mockResolvedValueOnce({ rows: [] } as any); // delete
