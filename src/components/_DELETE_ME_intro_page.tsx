@@ -245,8 +245,9 @@ function RepoStarsBadge({
     enabled: typeof window !== "undefined",
   });
 
-  const formattedStarsCount = formatGitHubStars(data ?? fallbackStarsCount);
-  const starsLabel = `${formattedStarsCount}${data ? "" : "+"} stars on GitHub`;
+  const count = data || fallbackStarsCount;
+  const formattedStarsCount = formatGitHubStars(count);
+  const starsLabel = `${count.toLocaleString()}${data ? "" : "+"} stars on GitHub`;
 
   return (
     <Button
