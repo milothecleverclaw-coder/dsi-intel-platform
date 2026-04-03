@@ -1,48 +1,75 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MessageSquare, Send } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/app/chat")({
   component: ChatPage,
 });
 
+const RAGFLOW_BASE = "https://ragflow.hotserver.uk";
+const SHARE_AUTH = "u0knS-A4qxPRorjfKqEL6KDe6ccz-2ah";
+
+const AGENTS = [
+  {
+    key: "general",
+    label: "General Chat",
+    sharedId: "0c91ccfc2f4e11f1868a91828498d495",
+  },
+  {
+    key: "case-assistant",
+    label: "Case Assistant",
+    sharedId: "2cc1a3fc253111f1868a91828498d495",
+  },
+  {
+    key: "specific-case",
+    label: "Specific Case",
+    sharedId: "2cc1a3fc253111f1868a91828498d495",
+  },
+] as const;
+
+function AgentIframe({ sharedId }: { sharedId: string }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      <iframe
+        src={`${RAGFLOW_BASE}/agent/share?shared_id=${sharedId}&from=agent&auth=${SHARE_AUTH}&theme=light`}
+        className="h-full w-full border-0"
+        allow="microphone"
+        title="RAGFlow Agent"
+      />
+      <div className="pointer-events-none absolute top-0 left-0 h-12 w-full bg-white" />
+    </div>
+  );
+}
+
 function ChatPage() {
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-border px-8 py-5">
-        <h1 className="text-xl font-semibold">AI Chat</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+    <div className="flex h-full flex-col bg-white">
+      <div className="border-b border-gray-200 px-8 py-5">
+        <h1 className="text-xl font-semibold text-gray-900">AI Chat</h1>
+        <p className="mt-1 text-sm text-gray-500">
           Interact with case data using natural language queries
         </p>
       </div>
 
-      {/* Messages area */}
-      <div className="flex flex-1 items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="flex flex-col items-center py-8">
-            <MessageSquare className="h-12 w-12 text-muted-foreground/40" />
-            <p className="mt-4 text-lg font-medium text-muted-foreground">AI Chat coming soon</p>
-            <p className="mt-1 text-center text-sm text-muted-foreground/70">
-              Query your case data with natural language. Ask about suspects, evidence, timelines,
-              and more.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Input bar */}
-      <div className="border-t border-border p-4">
-        <div className="flex gap-2">
-          <Input placeholder="Ask about your cases..." className="flex-1" disabled />
-          <Button disabled>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="flex flex-1 overflow-hidden p-4">
+        <Tabs defaultValue="general" className="flex h-full w-full flex-col">
+          <TabsList>
+            {AGENTS.map((a) => (
+              <TabsTrigger key={a.key} value={a.key}>
+                {a.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {AGENTS.map((a) => (
+            <TabsContent
+              key={a.key}
+              value={a.key}
+              className="mt-4 flex-1 overflow-hidden rounded-lg border border-gray-200"
+            >
+              <AgentIframe sharedId={a.sharedId} />
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </div>
   );
