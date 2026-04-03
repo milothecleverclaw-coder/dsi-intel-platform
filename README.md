@@ -1,94 +1,109 @@
-# [TanStarter](https://github.com/mugnavo/tanstarter)
+# DSI Intelligence Platform
 
-<!-- scaffold:description -->
+> Case management and intelligence tools for the Department of Special Investigation (DSI), Thailand.
 
-A minimal starter template for 🏝️ TanStack Start. [→ Preview here](https://tanstarter.mugnavo.com/)
+**Live:** [https://dsi.hotserver.uk/app](https://dsi.hotserver.uk/app)
 
-```bash
-pnpm create mugnavo
+---
+
+## 📁 Repository Structure
+
+```
+dsi-intel-platform/
+├── src/                          # Application source code
+│   ├── routes/                   # TanStack Router pages
+│   │   ├── index.tsx             # Landing page
+│   │   ├── app/                  # Main app (sidebar layout)
+│   │   │   ├── route.tsx         # App shell (sidebar + header)
+│   │   │   ├── index.tsx         # Dashboard
+│   │   │   ├── chat.tsx          # AI Chat (RAGFlow integration)
+│   │   │   ├── cases.tsx         # Case management
+│   │   │   ├── reports.tsx       # Report generation (ตร.1, ตร.2, ส.ป.อ.)
+│   │   │   └── settings.tsx      # Settings
+│   │   ├── __root.tsx            # Root layout
+│   │   └── api/                  # API routes
+│   ├── components/               # React components
+│   │   └── ui/                   # shadcn/ui components
+│   └── lib/                      # Utilities and shared code
+│
+├── mock-case-data/               # Mock case files for development & RAGFlow
+│   └── mock-case-dsi-2026-sb-042/
+│       ├── 00_CASE_OVERVIEW.md
+│       ├── 01_GROUND_TRUTH.md
+│       ├── 02_PERSONAS/          # 7 persona files (suspects, witnesses)
+│       ├── 03_EVIDENCE/          # Evidence documents
+│       │   ├── cctv/             # CCTV footage logs
+│       │   ├── phone/            # Phone intercept logs
+│       │   └── receipts/         # Financial records
+│       ├── 04_POLICE/            # Police reports
+│       └── README.md
+│
+├── public/                       # Static assets
+├── package.json                  # Dependencies
+├── vite.config.ts                # Vite configuration
+├── drizzle.config.ts             # Database schema (Drizzle ORM)
+├── DEV-PLAN.md                   # Development roadmap
+└── docker-compose.yml            # Local development services
 ```
 
-- [React 19](https://react.dev) + [React Compiler](https://react.dev/learn/react-compiler)
-- TanStack [Start](https://tanstack.com/start/latest) + [Router](https://tanstack.com/router/latest) + [Query](https://tanstack.com/query/latest)
-- [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) + [Base UI](https://base-ui.com/) (base-maia, [`--preset b1ZOKpgEC`](https://ui.shadcn.com/create?preset=b1ZOKpgEC&base=base&template=start))
-- [Vite 8](https://vite.dev) + [Nitro v3](https://nitro.build/)
-- [Drizzle ORM](https://orm.drizzle.team/) + PostgreSQL
-- [Better Auth](https://www.better-auth.com/)
-- [Oxlint](https://oxc.rs/docs/guide/usage/linter.html) + [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.html)
+---
 
-> [!TIP]
-> This template is also available as a monorepo, powered by [Vite+](https://viteplus.dev/) and pnpm. See [mugnavo/tanstarter-plus](https://github.com/mugnavo/tanstarter-plus).
+## 🛠 Tech Stack
 
-## Getting Started
+| Layer      | Technology                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| Framework  | [TanStack Start](https://tanstack.com/start) (React 19 + React Compiler)                                         |
+| Routing    | [TanStack Router](https://tanstack.com/router)                                                                   |
+| UI         | [shadcn/ui](https://ui.shadcn.com/) + [Base UI](https://base-ui.com/) + [Tailwind CSS](https://tailwindcss.com/) |
+| Database   | [Drizzle ORM](https://orm.drizzle.team/) + PostgreSQL                                                            |
+| AI Backend | [RAGFlow](https://ragflow.io/) (Qwen3 8B via OpenRouter)                                                         |
+| Hosting    | DigitalOcean sgp1 + Cloudflare Tunnel                                                                            |
 
-1. [Use this template](https://github.com/new?template_name=tanstarter&template_owner=mugnavo) or create a project using our CLI:
+---
 
-   ```bash
-   pnpm create mugnavo
-   ```
+## 🚀 Quick Start
 
-2. Create a `.env` file based on [`.env.example`](./.env.example).
+```bash
+# Install dependencies
+pnpm install
 
-3. Generate the initial migration with drizzle-kit, then apply to your database:
+# Start dev server (port 3000)
+pnpm dev
+```
 
-   ```sh
-   pnpm db generate
-   pnpm db migrate
-   ```
+---
 
-   https://orm.drizzle.team/docs/migrations
+## 📋 Features (Current)
 
-4. Run the development server:
+- ✅ Dashboard with case stats and activity feed
+- ✅ Chat interface (RAGFlow integration pending)
+- ✅ Case management (mock data)
+- ✅ Report generation stubs
+- ✅ Settings page
+- ✅ Responsive sidebar layout
+- ✅ Dark/light theme toggle
 
-   ```bash
-   pnpm dev
-   ```
+## 📋 Roadmap
 
-   The development server should now be running at [http://localhost:3000](http://localhost:3000).
+- [ ] RAGFlow chat integration (embedding model + knowledge base)
+- [ ] Thai police report automation (ตร.1, ตร.2, ส.ป.อ.)
+- [ ] Better Auth integration for user management
+- [ ] Production build and deployment
+- [ ] Thai font optimization (Sarabun)
 
-## Deploying to production
+---
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/66acdee6-8e42-436f-9943-a67cad998f63/deploy-status)](https://app.netlify.com/projects/mugnavo-tanstarter/deploys)
+## 📊 Mock Case Data
 
-The [vite config](./vite.config.ts#L19-L20) is configured to use Nitro by default, which supports many [deployment presets](https://nitro.build/deploy) like Netlify, Vercel, Node.js, and more.
+The `mock-case-data/` directory contains a simulated DSI investigation case (DSI-2026-SB-042) with:
 
-Refer to the [TanStack Start hosting docs](https://tanstack.com/start/latest/docs/framework/react/guide/hosting) for more information.
+- **7 personas** — suspects, witnesses, and officers
+- **13+ evidence files** — CCTV logs, phone intercepts, financial records
+- **6 police reports** — raid, arrest, interrogation, closure
+- **Case overview and ground truth** — for testing AI analysis accuracy
 
-## Issue watchlist
+This data is used for development and as the initial RAGFlow knowledge base.
 
-- [Router/Start issues](https://github.com/TanStack/router/issues) - TanStack Start is in RC.
-- [Devtools releases](https://github.com/TanStack/devtools/releases) - TanStack Devtools is in alpha and may still have breaking changes.
-- [Nitro v3 beta](https://nitro.build/blog/v3-beta) - The template is configured with Nitro v3 beta by default.
+---
 
-## Goodies
-
-#### Git hooks
-
-We use [Husky](https://typicode.github.io/husky/) to run git hooks with the following tools:
-
-- [lint-staged](https://github.com/lint-staged/lint-staged) - Run Oxfmt to format staged files on commit (`pre-commit`).
-
-#### Scripts
-
-We use **pnpm** by default, but you can modify these scripts in [package.json](./package.json) to use your preferred package manager.
-
-- **`auth:generate`** - Regenerate the [auth db schema](./src/lib/db/schema/auth.schema.ts) if you've made changes to your Better Auth [config](./src/lib/auth/auth.ts).
-- **`db`** - Run [drizzle-kit](https://orm.drizzle.team/docs/kit-overview) commands. (e.g. `pnpm db generate`, `pnpm db studio`)
-- **`ui`** - The shadcn/ui CLI. (e.g. `pnpm ui add button`)
-- **`format`**, **`lint`** - Run Oxfmt and Oxlint, or both via `pnpm check`.
-- **`deps`** - Selectively upgrade dependencies via taze.
-
-#### Utilities
-
-- [`auth/middleware.ts`](./src/lib/auth/middleware.ts) - Sample middleware for forcing authentication on server functions. (see [#5](https://github.com/mugnavo/tanstarter/issues/5#issuecomment-2615905686) and [#17](https://github.com/mugnavo/tanstarter/issues/17#issuecomment-2853482062))
-- [`theme-toggle.tsx`](./src/components/theme-toggle.tsx), [`theme-provider.tsx`](./src/components/theme-provider.tsx) - A theme toggle and provider for toggling between light and dark mode. ([#7](https://github.com/mugnavo/tanstarter/issues/7#issuecomment-3141530412))
-
-## License
-
-Code in this template is public domain via [Unlicense](./LICENSE). Feel free to remove or replace for your own project.
-
-## Ecosystem
-
-- [@tanstack/intent](https://tanstack.com/intent/latest/docs/getting-started/quick-start-consumers) - Up-to-date skills for your AI agents, auto-synchronized from your installed dependencies.
-- [awesome-tanstack-start](https://github.com/Balastrong/awesome-tanstack-start) - A curated list of awesome resources for TanStack Start.
-- [shadcn/ui Directory](https://ui.shadcn.com/docs/directory), [MCP](https://ui.shadcn.com/docs/mcp), [shoogle.dev](https://shoogle.dev/) - Component directories & registries for shadcn/ui.
+_Built on [TanStarter](https://github.com/mugnavo/tanstarter) by the DSI/Oboon team._

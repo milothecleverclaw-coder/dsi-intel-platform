@@ -12,14 +12,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    allowedHosts: ["dsi.hotserver.uk"],
   },
   plugins: [
     devtools(),
     tanstackStart(),
-    // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
     nitro(),
     viteReact(),
-    // https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#react-compiler
     babel({
       presets: [reactCompilerPreset()],
     }),

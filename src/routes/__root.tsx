@@ -7,13 +7,11 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import type { AuthQueryResult } from "@/lib/auth/queries";
 
 import appCss from "@/styles.css?url";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
-  user: AuthQueryResult;
 }>()({
   // Typically we don't need the user immediately in landing pages.
   // For protected routes with loader data, see /_auth/route.tsx
@@ -30,20 +28,19 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       {
-        // scaffold:title
-        title: "TanStarter",
+        title: "DSI Intelligence Platform",
       },
       {
         name: "description",
-        // scaffold:description
-        content: "A minimal starter template for 🏝️ TanStack Start.",
+        content:
+          "DSI Intelligence Platform — AI-powered case management and report generation for the Department of Special Investigation",
       },
     ],
     links: [
-      // Replace with your icons here, or remove if you have a favicon.ico in public/
       {
         rel: "icon",
-        href: "https://mugnavo.com/favicon.ico",
+        type: "image/svg+xml",
+        href: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>",
       },
       { rel: "stylesheet", href: appCss },
     ],
@@ -67,7 +64,7 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider>
+        <ThemeProvider defaultTheme="light">
           {children}
           <Toaster richColors />
         </ThemeProvider>
