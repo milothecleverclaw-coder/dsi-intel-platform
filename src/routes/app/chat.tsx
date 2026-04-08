@@ -84,7 +84,7 @@ const SESSION_NAMES_KEY = "dsi-session-names";
 const SESSION_REFS_KEY = "dsi-session-refs";
 
 function stripCitationTags(text: string): string {
-  return text.replace(/\[ID:\d+\]/g, "");
+  return text.replace(/\[ID:\d+\]?\s*/g, "");
 }
 
 function stripHtml(html: string): string {
@@ -100,7 +100,8 @@ function truncate(str: string, max: number): string {
 function parseCitations(text: string): { idMap: Record<string, number>; ids: string[] } {
   const idMap: Record<string, number> = {};
   const ids: string[] = [];
-  const re = /\[ID:(\d+)\]/g;
+  // Match [ID:123] or malformed [ID:123 (missing closing bracket)
+  const re = /\[ID:(\d+)\]?\s*/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const id = m[1];
@@ -119,12 +120,12 @@ function renderCitedText(
 ) {
   if (!Object.keys(idMap).length) return <Markdown>{text}</Markdown>;
 
-  const parts = text.split(/(\[ID:\d+\])/);
+  const parts = text.split(/(\[ID:\d+\]?\s*)/);
   const nodes: React.ReactNode[] = [];
   let mdBuf = "";
 
   for (const part of parts) {
-    const m = part.match(/^\[ID:(\d+)\]$/);
+    const m = part.match(/^\[ID:(\d+)\]?\s*$/);
     if (m) {
       if (mdBuf) {
         nodes.push(<Markdown key={`md-${nodes.length}`}>{mdBuf}</Markdown>);
@@ -226,9 +227,7 @@ async function fetchSessions(
             return false;
           return true;
         });
-        msgsMap[id] = filtered.map((m) =>
-          m.role === "assistant" ? { ...m, content: stripCitationTags(m.content) } : m,
-        );
+        msgsMap[id] = filtered;
         return {
           id,
           title: (s.name as string) || "",
@@ -1079,53 +1078,31 @@ function ChatPage() {
       const res = await fetch(`${RAGFLOW_API}/agents/${activeAgentId}/completions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: activeSessionId, question, stream: true }),
+        body: JSON.stringify({ session_id: activeSessionId, question, stream: false }),
       });
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
+      const json = await res.json();
+      const content =
+        json?.data?.data?.content ||
+        json?.data?.content ||
+        json?.data?.answer ||
+        "ไม่สามารถดึงข้อมูลได้";
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split("\n")) {
-            if (line.startsWith("data:")) {
-              try {
-                const json = JSON.parse(line.slice(5).trim());
-                if (json.event === "message" && json.data?.content) {
-                  accumulated += json.data.content;
-                  setMessagesMap((prev) => {
-                    const msgs = [...(prev[activeSessionId] || [])];
-                    msgs[msgs.length - 1] = { role: "assistant", content: accumulated };
-                    return { ...prev, [activeSessionId]: msgs };
-                  });
-                }
-                if (json.event === "message_end" && json.data?.reference?.chunks) {
-                  const refChunks = json.data.reference.chunks as Record<string, Chunk>;
-                  setRefsMap((prev) => ({
-                    ...prev,
-                    [activeSessionId]: { ...(prev[activeSessionId] || {}), ...refChunks },
-                  }));
-                  saveSessionRefs(activeSessionId, refChunks);
-                }
-              } catch {
-                /* skip */
-              }
-            }
-          }
-        }
-      }
+      setMessagesMap((prev) => {
+        const msgs = [...(prev[activeSessionId] || [])];
+        msgs[msgs.length - 1] = { role: "assistant", content };
+        return { ...prev, [activeSessionId]: msgs };
+      });
 
-      const cleaned = stripCitationTags(accumulated);
-      if (cleaned !== accumulated) {
-        setMessagesMap((prev) => {
-          const msgs = [...(prev[activeSessionId] || [])];
-          msgs[msgs.length - 1] = { role: "assistant", content: cleaned };
-          return { ...prev, [activeSessionId]: msgs };
-        });
+      // Save reference chunks
+      const refChunks = json?.data?.data?.reference?.chunks || json?.data?.reference?.chunks;
+      if (refChunks) {
+        const parsed = refChunks as Record<string, Chunk>;
+        setRefsMap((prev) => ({
+          ...prev,
+          [activeSessionId]: { ...(prev[activeSessionId] || {}), ...parsed },
+        }));
+        saveSessionRefs(activeSessionId, parsed);
       }
     } catch {
       setMessagesMap((prev) => {
