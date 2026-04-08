@@ -23,3 +23,5 @@ dist
 
 .tanstackdata/
 data/*.db
+data/dsi.db-shm
+data/dsi.db-wal

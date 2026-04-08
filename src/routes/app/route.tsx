@@ -1,15 +1,13 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Shield, MessageSquare, Menu, X } from "lucide-react";
-import { useState } from "react";
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { Shield, FolderKanban, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
-const navItems = [
-  { icon: MessageSquare, label: "Chat", to: "/app/chat" },
-];
+const navItems = [{ icon: FolderKanban, label: "Cases", to: "/app/cases" }];
 
 function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -27,9 +25,7 @@ function AppLayout() {
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Shield className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold tracking-tight md:text-base">
-            DSI Intel
-          </span>
+          <span className="text-sm font-semibold tracking-tight md:text-base">DSI Intel</span>
         </div>
       </header>
 
@@ -43,7 +39,7 @@ function AppLayout() {
 
       {/* Mobile nav drawer */}
       <nav
-        className={`fixed left-0 top-12 z-50 h-[calc(100vh-3rem)] w-60 border-r border-border bg-card p-3 transition-transform duration-200 md:hidden ${
+        className={`fixed top-12 left-0 z-50 h-[calc(100vh-3rem)] w-60 border-r border-border bg-card p-3 transition-transform duration-200 md:hidden ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

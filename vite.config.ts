@@ -17,7 +17,9 @@ export default defineConfig({
   plugins: [
     devtools(),
     tanstackStart(),
-    nitro(),
+    nitro({
+      serverDir: "server",
+    }),
     viteReact(),
     babel({
       presets: [reactCompilerPreset()],

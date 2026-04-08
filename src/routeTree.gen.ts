@@ -15,7 +15,6 @@ import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppSettingsRouteImport } from './routes/app/settings'
 import { Route as AppReportsRouteImport } from './routes/app/reports'
 import { Route as AppChatRouteImport } from './routes/app/chat'
-import { Route as AppCasesRouteImport } from './routes/app/cases'
 
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/app',
@@ -47,16 +46,10 @@ const AppChatRoute = AppChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppCasesRoute = AppCasesRouteImport.update({
-  id: '/cases',
-  path: '/cases',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
-  '/app/cases': typeof AppCasesRoute
   '/app/chat': typeof AppChatRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
@@ -64,7 +57,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app/cases': typeof AppCasesRoute
   '/app/chat': typeof AppChatRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
@@ -74,7 +66,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
-  '/app/cases': typeof AppCasesRoute
   '/app/chat': typeof AppChatRoute
   '/app/reports': typeof AppReportsRoute
   '/app/settings': typeof AppSettingsRoute
@@ -85,24 +76,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
-    | '/app/cases'
     | '/app/chat'
     | '/app/reports'
     | '/app/settings'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/app/cases'
-    | '/app/chat'
-    | '/app/reports'
-    | '/app/settings'
-    | '/app'
+  to: '/' | '/app/chat' | '/app/reports' | '/app/settings' | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
-    | '/app/cases'
     | '/app/chat'
     | '/app/reports'
     | '/app/settings'
@@ -158,18 +141,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppChatRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/app/cases': {
-      id: '/app/cases'
-      path: '/cases'
-      fullPath: '/app/cases'
-      preLoaderRoute: typeof AppCasesRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
   }
 }
 
 interface AppRouteRouteChildren {
-  AppCasesRoute: typeof AppCasesRoute
   AppChatRoute: typeof AppChatRoute
   AppReportsRoute: typeof AppReportsRoute
   AppSettingsRoute: typeof AppSettingsRoute
@@ -177,7 +152,6 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppCasesRoute: AppCasesRoute,
   AppChatRoute: AppChatRoute,
   AppReportsRoute: AppReportsRoute,
   AppSettingsRoute: AppSettingsRoute,

@@ -66,6 +66,7 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "drizzle-kit": "^0.31.10",
     "eslint-plugin-react-hooks": "^7.0.1",
+    "h3": "2.0.1-rc.20",
     "husky": "9.1.7",
     "lint-staged": "^16.4.0",
     "nitro": "^3.0.260311-beta",
@@ -80,10 +81,10 @@
   "lint-staged": {
     "*": "oxfmt --no-error-on-unmatched-pattern"
   },
-  "generator": "create-mugnavo",
   "pnpm": {
     "onlyBuiltDependencies": [
       "better-sqlite3"
     ]
-  }
+  },
+  "generator": "create-mugnavo"
 }
