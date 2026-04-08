@@ -500,7 +500,7 @@ function SidebarContent({
           const isActive = activeCaseId === c.agentId;
           return (
             <Collapsible key={c.agentId} open={isExpanded}>
-              <div className="flex items-center">
+              <div className="group flex items-center">
                 <CollapsibleTrigger
                   className="flex flex-1 cursor-pointer items-center gap-1.5 px-3 py-2 text-sm transition-colors hover:bg-accent"
                   onClick={() => {
@@ -519,6 +519,23 @@ function SidebarContent({
                     {c.name}
                   </span>
                 </CollapsibleTrigger>
+                {c.name !== "default" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm("ต้องการลบคดีนี้และข้อมูลทั้งหมดใช่หรือไม่?")) {
+                        fetch(`/api/cases/${c.id}`, { method: "DELETE" })
+                          .then((r) => r.json())
+                          .then((data) => {
+                            if (!data.error) setCases((prev) => prev.filter((x) => x.id !== c.id));
+                          });
+                      }
+                    }}
+                    className="shrink-0 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
               <CollapsibleContent>
                 <div className="ml-3 border-l border-border pl-2">
@@ -762,14 +779,36 @@ function FilesTab({ datasetId }: { datasetId: string }) {
               {docs.map((doc, i) => (
                 <div
                   key={doc.id || i}
-                  className="rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-sm"
+                  className="group rounded-lg border border-gray-200 bg-white p-3 transition-shadow hover:shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="shrink-0 text-lg">{fileIcon(doc.name)}</span>
                       <span className="truncate text-sm font-medium text-gray-900">{doc.name}</span>
                     </div>
-                    {statusBadge(doc)}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {statusBadge(doc)}
+                      <button
+                        onClick={() => {
+                          if (window.confirm("ต้องการลบเอกสารนี้ใช่หรือไม่?")) {
+                            fetch(`${RAGFLOW_API}/datasets/${datasetId}/documents`, {
+                              method: "DELETE",
+                              headers: {
+                                Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({ ids: [doc.id] }),
+                            }).then(() => {
+                              setDocs((prev) => prev.filter((d) => d.id !== doc.id));
+                              setTotal((prev) => prev - 1);
+                            });
+                          }
+                        }}
+                        className="rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                      </button>
+                    </div>
                   </div>
                   {doc.run === "RUNNING" && (
                     <div className="mt-2">
@@ -882,6 +921,17 @@ function ChatPage() {
   // Chat input
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const typingMessages = [
+    "กำลังวิเคราะห์เอกสาร...",
+    "กำลังตรวจสอบหลักฐาน...",
+    "กำลังเรียบเรียงข้อมูล...",
+    "กำลังสืบสวน...",
+    "กำลังจัดทำรายงาน...",
+    "กำลังวิเคราะห์คดี...",
+    "กำลังเปรียบเทียบเอกสาร...",
+    "กำลังสรุปข้อเท็จจริง...",
+  ];
+  const [typingMsg, setTypingMsg] = useState("");
 
   // Tooltip
   const [tooltip, setTooltip] = useState<{ chunk: Chunk; rect: DOMRect } | null>(null);
@@ -1073,6 +1123,7 @@ function ChatPage() {
       [activeSessionId]: [...(prev[activeSessionId] || []), userMsg, placeholderMsg],
     }));
     setLoading(true);
+    setTypingMsg(typingMessages[Math.floor(Math.random() * typingMessages.length)]);
 
     try {
       const res = await fetch(`${RAGFLOW_API}/agents/${activeAgentId}/completions`, {
@@ -1319,7 +1370,14 @@ function ChatPage() {
                           >
                             {isAssistant ? (
                               <div className="prose prose-sm max-w-none">
-                                {hasCitations ? (
+                                {!msg.content.trim() && loading ? (
+                                  <span className="flex items-center gap-1 text-gray-400">
+                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
+                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" />
+                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-200 [animation-delay:300ms]" />
+                                    <span className="ml-1">{typingMsg}</span>
+                                  </span>
+                                ) : hasCitations ? (
                                   renderCitedText(msg.content, idMap, (badgeNum, el) => {
                                     const chunkId = Object.entries(idMap).find(
                                       ([, n]) => n === badgeNum,
