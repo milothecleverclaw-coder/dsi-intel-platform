@@ -8,4 +8,5 @@ export const cases = sqliteTable("cases", {
   agentId: text("agent_id").notNull(),
   createdById: text("created_by_id").notNull(),
   createdAt: text("created_at").notNull(),
+  details: text("details"),
 });

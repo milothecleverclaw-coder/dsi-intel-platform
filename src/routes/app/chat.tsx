@@ -55,6 +55,7 @@ interface Case {
   agentId: string;
   createdById: string;
   createdAt: string;
+  details?: string;
 }
 
 interface Session {
@@ -513,11 +514,16 @@ function SidebarContent({
                   ) : (
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   )}
-                  <span
-                    className={`truncate ${isActive ? "font-semibold text-foreground" : "text-muted-foreground"}`}
-                  >
-                    {c.name}
-                  </span>
+                  <CaseNameEditable
+                    caseId={c.id}
+                    name={c.name}
+                    isActive={isActive}
+                    onUpdate={(newName) => {
+                      setCases((prev) =>
+                        prev.map((x) => (x.id === c.id ? { ...x, name: newName } : x)),
+                      );
+                    }}
+                  />
                 </CollapsibleTrigger>
                 {c.name !== "default" && (
                   <button
@@ -583,6 +589,142 @@ function SidebarContent({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ── Editable Case Name ────────────────────────────────────────────
+
+function CaseNameEditable({
+  caseId,
+  name,
+  isActive,
+  onUpdate,
+}: {
+  caseId: string;
+  name: string;
+  isActive: boolean;
+  onUpdate: (newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
+
+  const save = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== name) {
+      fetch(`/api/cases/${caseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (!data.error) onUpdate(trimmed);
+        });
+    } else {
+      setDraft(name);
+    }
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") {
+            setDraft(name);
+            setEditing(false);
+          }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        className="min-w-0 flex-1 truncate border-b border-primary bg-transparent px-0.5 text-sm outline-none"
+      />
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        setDraft(name);
+        setEditing(true);
+      }}
+      className={`cursor-text truncate ${isActive ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+    >
+      {name}
+    </span>
+  );
+}
+
+// ── Case Details Panel ────────────────────────────────────────────
+
+function CaseDetailsPanel({
+  caseId,
+  details,
+  onUpdate,
+}: {
+  caseId: string;
+  details?: string;
+  onUpdate: (details: string) => void;
+}) {
+  const [draft, setDraft] = useState(details || "");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const save = useCallback(
+    (value: string) => {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        fetch(`/api/cases/${caseId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ details: value }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (!data.error) onUpdate(value);
+          });
+      }, 500);
+    },
+    [caseId, onUpdate],
+  );
+
+  if (!caseId) return null;
+
+  return (
+    <div className="mb-3 rounded-lg border border-gray-200 bg-white p-3">
+      <label className="mb-1.5 block text-sm font-medium text-gray-700">สำนวนคดี</label>
+      <textarea
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          save(e.target.value);
+        }}
+        onBlur={() => {
+          clearTimeout(timerRef.current);
+          fetch(`/api/cases/${caseId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ details: draft }),
+          })
+            .then((r) => r.json())
+            .then((data) => {
+              if (!data.error) onUpdate(draft);
+            });
+        }}
+        placeholder="กรอกรายละเอียดคดี..."
+        rows={4}
+        className="w-full resize-y rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-300 focus:ring-1 focus:ring-blue-300 focus:outline-none"
+      />
     </div>
   );
 }
@@ -1448,6 +1590,13 @@ function ChatPage() {
 
           {/* Files tab */}
           <TabsContent value="files" className="min-h-0">
+            <CaseDetailsPanel
+              caseId={activeCase?.id ?? ""}
+              details={activeCase?.details}
+              onUpdate={(details) => {
+                setActiveCase((prev) => (prev ? { ...prev, details } : null));
+              }}
+            />
             <FilesTab datasetId={activeDatasetId} />
           </TabsContent>
 
