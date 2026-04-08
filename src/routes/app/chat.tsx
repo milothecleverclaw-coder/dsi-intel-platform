@@ -1590,6 +1590,11 @@ function ChatPage() {
 
           {/* Files tab */}
           <TabsContent value="files" className="min-h-0">
+            <FilesTab datasetId={activeDatasetId} />
+          </TabsContent>
+
+          {/* Info tab */}
+          <TabsContent value="info" className="min-h-0">
             <CaseDetailsPanel
               caseId={activeCase?.id ?? ""}
               details={activeCase?.details}
@@ -1597,11 +1602,6 @@ function ChatPage() {
                 setActiveCase((prev) => (prev ? { ...prev, details } : null));
               }}
             />
-            <FilesTab datasetId={activeDatasetId} />
-          </TabsContent>
-
-          {/* Info tab */}
-          <TabsContent value="info" className="min-h-0">
             <InfoTab activeCase={activeCase} />
           </TabsContent>
         </Tabs>
