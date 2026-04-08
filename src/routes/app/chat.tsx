@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   BookOpen,
+  Play,
   Upload,
   FolderPlus,
   Menu,
@@ -377,13 +378,17 @@ function ReferencePanel({
 // ── File helpers ──────────────────────────────────────────────────
 
 interface Doc {
+  id?: string;
   name: string;
-  status: number;
-  progress: number;
+  status: string; // "0"=UNSTART, "1"=DONE, "2"=PARSING, "6"=ERROR
+  run: string; // UNSTART | RUNNING | DONE | CANCEL | FAIL
+  progress: number | { source?: string; parsedValue?: number }; // 0.0 → 1.0 or object
+  progress_msg?: string;
   chunk_count: number;
   size: number;
-  create_time: string;
-  id?: string;
+  create_time: number;
+  token_count?: number;
+  process_begin_at?: string;
 }
 
 function fileIcon(name: string) {
@@ -396,26 +401,32 @@ function fileIcon(name: string) {
   return "📎";
 }
 
-function statusBadge(status: number) {
-  if (status === 1)
+function statusBadge(doc: Doc) {
+  const { run, status, progress_msg } = doc;
+  if (run === "DONE")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
         ✅ เสร็จสิ้น
       </span>
     );
-  if (status === 2)
+  if (run === "RUNNING")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
-        ⏳ กำลังดำเนินการ
+        ⏳{" "}
+        {progress_msg ? progress_msg.split("\n").pop()?.trim() || "กำลังดำเนินการ" : "กำลังดำเนินการ"}
       </span>
     );
-  if (status === 6)
+  if (run === "FAIL" || status === "6")
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
         ❌ ผิดพลาด
       </span>
     );
-  return <span className="text-xs text-gray-500">สถานะ {status}</span>;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+      ยังไม่ย่อย
+    </span>
+  );
 }
 
 function formatSize(bytes: number) {
@@ -424,11 +435,11 @@ function formatSize(bytes: number) {
   return (bytes / 1048576).toFixed(1) + " MB";
 }
 
-function formatDate(ts: string) {
+function formatDate(ts: string | number) {
   try {
     return new Date(ts).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
   } catch {
-    return ts;
+    return String(ts);
   }
 }
 
@@ -446,8 +457,6 @@ interface SidebarProps {
   onNewCase: () => void;
   onNewSession: () => void;
   onDeleteSession: (id: string) => void;
-  onUpload: () => void;
-  uploading: boolean;
 }
 
 function SidebarContent({
@@ -462,8 +471,6 @@ function SidebarContent({
   onNewCase,
   onNewSession,
   onDeleteSession,
-  onUpload,
-  uploading,
 }: SidebarProps) {
   return (
     <div className="flex h-full flex-col">
@@ -560,18 +567,6 @@ function SidebarContent({
           );
         })}
       </div>
-      <Separator />
-      {/* Upload button */}
-      <div className="p-3">
-        <button
-          onClick={onUpload}
-          disabled={uploading}
-          className="inline-flex w-full items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:border-blue-300 hover:text-blue-600 disabled:opacity-50"
-        >
-          <Upload className="h-3.5 w-3.5" />
-          {uploading ? "กำลังอัปโหลด..." : "อัปโหลดเอกสาร"}
-        </button>
-      </div>
     </div>
   );
 }
@@ -583,6 +578,7 @@ function FilesTab({ datasetId }: { datasetId: string }) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocs = useCallback(async () => {
@@ -611,7 +607,7 @@ function FilesTab({ datasetId }: { datasetId: string }) {
   }, [fetchDocs]);
 
   useEffect(() => {
-    const hasParsing = docs.some((d) => d.status === 2);
+    const hasParsing = docs.some((d) => d.run === "RUNNING");
     if (!hasParsing) return;
     const id = setInterval(fetchDocs, 5000);
     return () => clearInterval(id);
@@ -620,21 +616,81 @@ function FilesTab({ datasetId }: { datasetId: string }) {
   async function handleUpload(files: FileList | null) {
     if (!files || !files.length || !datasetId) return;
     setUploading(true);
+    let uploadCount = 0;
     for (const file of Array.from(files)) {
       const form = new FormData();
       form.append("file", file);
       try {
-        await fetch(`${RAGFLOW_API}/datasets/${datasetId}/documents/upload_and_parse`, {
+        await fetch(`${RAGFLOW_API}/datasets/${datasetId}/documents`, {
           method: "POST",
           headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
           body: form,
         });
+        uploadCount++;
       } catch {
         /* ignore */
       }
     }
+    if (uploadCount > 0) {
+      // Wait for docs to register, then parse all UNSTART docs
+      await new Promise((r) => setTimeout(r, 3000));
+      const listRes = await fetch(
+        `${RAGFLOW_API}/datasets/${datasetId}/documents?page=1&page_size=100`,
+        { headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` } },
+      );
+      const listData = await listRes.json();
+      if (listData.code === 0) {
+        const unstartIds = (listData.data.docs || [])
+          .filter((d: any) => d.run === "UNSTART")
+          .map((d: any) => d.id);
+        if (unstartIds.length > 0) {
+          await fetch(`${RAGFLOW_API}/datasets/${datasetId}/chunks`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ document_ids: unstartIds }),
+          });
+        }
+      }
+    }
     setUploading(false);
     fetchDocs();
+  }
+
+  async function handleParseAll() {
+    if (!datasetId) return;
+    setParsing(true);
+    try {
+      const listRes = await fetch(
+        `${RAGFLOW_API}/datasets/${datasetId}/documents?page=1&page_size=100`,
+        { headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` } },
+      );
+      const listData = await listRes.json();
+      if (listData.code === 0) {
+        const allIds = (listData.data.docs || []).map((d: any) => d.id);
+        if (allIds.length > 0) {
+          console.log(
+            `[FilesTab] POST /api/v1/datasets/${datasetId}/chunks →`,
+            JSON.stringify({ document_ids: allIds }),
+          );
+          await fetch(`${RAGFLOW_API}/datasets/${datasetId}/chunks`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ document_ids: allIds }),
+          });
+          await new Promise((r) => setTimeout(r, 2000));
+          fetchDocs();
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setParsing(false);
   }
 
   if (!datasetId) {
@@ -662,14 +718,24 @@ function FilesTab({ datasetId }: { datasetId: string }) {
               <h2 className="text-lg font-semibold text-gray-900">📁 เอกสาร</h2>
               <p className="mt-0.5 text-sm text-gray-500">{total} เอกสาร</p>
             </div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4" />
-              {uploading ? "กำลังอัปโหลด..." : "อัปโหลด"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleParseAll}
+                disabled={parsing}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+              >
+                <Play className="h-4 w-4" />
+                {parsing ? "กำลัง parse..." : "ย่อยทั้งหมด"}
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading ? "กำลังอัปโหลด..." : "อัปโหลด"}
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -704,14 +770,28 @@ function FilesTab({ datasetId }: { datasetId: string }) {
                       <span className="shrink-0 text-lg">{fileIcon(doc.name)}</span>
                       <span className="truncate text-sm font-medium text-gray-900">{doc.name}</span>
                     </div>
-                    {statusBadge(doc.status)}
+                    {statusBadge(doc)}
                   </div>
-                  {doc.status === 2 && (
-                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full rounded-full bg-yellow-500 transition-all duration-500"
-                        style={{ width: `${Math.round(doc.progress * 100)}%` }}
-                      />
+                  {doc.run === "RUNNING" && (
+                    <div className="mt-2">
+                      <div className="mb-0.5 flex justify-end">
+                        <span className="text-xs font-medium text-yellow-600">
+                          {Math.round(
+                            (typeof doc.progress === "number"
+                              ? doc.progress
+                              : Number(doc.progress?.source || 0)) * 100,
+                          )}
+                          %
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          className="h-full rounded-full bg-yellow-500 transition-all duration-500"
+                          style={{
+                            width: `${Math.round((typeof doc.progress === "number" ? doc.progress : Number(doc.progress?.source || 0)) * 100)}%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                   <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-500">
@@ -1093,17 +1173,43 @@ function ChatPage() {
   async function handleSidebarUpload(files: FileList | null) {
     if (!files || !files.length || !activeDatasetId) return;
     setUploading(true);
+    let uploadCount = 0;
     for (const file of Array.from(files)) {
       const form = new FormData();
       form.append("file", file);
       try {
-        await fetch(`${RAGFLOW_API}/datasets/${activeDatasetId}/documents/upload_and_parse`, {
+        await fetch(`${RAGFLOW_API}/datasets/${activeDatasetId}/documents`, {
           method: "POST",
           headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
           body: form,
         });
+        uploadCount++;
       } catch {
         /* ignore */
+      }
+    }
+    if (uploadCount > 0) {
+      // Wait for docs to register, then parse all UNSTART docs
+      await new Promise((r) => setTimeout(r, 3000));
+      const listRes = await fetch(
+        `${RAGFLOW_API}/datasets/${activeDatasetId}/documents?page=1&page_size=100`,
+        { headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` } },
+      );
+      const listData = await listRes.json();
+      if (listData.code === 0) {
+        const unstartIds = (listData.data.docs || [])
+          .filter((d: any) => d.run === "UNSTART")
+          .map((d: any) => d.id);
+        if (unstartIds.length > 0) {
+          await fetch(`${RAGFLOW_API}/datasets/${activeDatasetId}/chunks`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ document_ids: unstartIds }),
+          });
+        }
       }
     }
     setUploading(false);
@@ -1121,8 +1227,6 @@ function ChatPage() {
     onNewCase: () => setShowCreateModal(true),
     onNewSession: handleNewSession,
     onDeleteSession: handleDeleteSession,
-    onUpload: () => fileInputRef.current?.click(),
-    uploading,
   };
 
   return (
@@ -1136,7 +1240,9 @@ function ChatPage() {
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" className="w-72 p-0">
           <SheetHeader>
-            <SheetTitle className="px-3 pt-3 text-sm font-semibold">🏛 DSI Smart Chat</SheetTitle>
+            <SheetTitle className="px-3 pt-3 text-sm font-semibold">
+              {activeCase?.name ?? "ประจักษ์ AI"}
+            </SheetTitle>
             <SheetDescription className="sr-only">Cases and chat sessions</SheetDescription>
           </SheetHeader>
           <SidebarContent {...sidebarProps} />
@@ -1163,7 +1269,7 @@ function ChatPage() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="text-sm font-semibold">🏛 DSI Smart Chat</span>
+          <span className="text-sm font-semibold">{activeCase?.name ?? "ประจักษ์ AI"}</span>
           {activeCase && (
             <Badge variant="secondary" className="ml-auto hidden text-xs sm:inline-flex">
               {activeCase.name}

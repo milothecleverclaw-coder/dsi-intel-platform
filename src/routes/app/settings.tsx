@@ -54,7 +54,7 @@ function SettingsPage() {
           <CardContent>
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>
-                <strong>DSI Intelligence Platform</strong>
+                <strong>ประจักษ์ AI Platform</strong>
               </p>
               <p>Version 0.1 (Alpha)</p>
               <Separator className="my-2" />

@@ -25,7 +25,7 @@ function AppLayout() {
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <Shield className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold tracking-tight md:text-base">DSI Intel</span>
+          <span className="text-sm font-semibold tracking-tight md:text-base">ประจักษ์ AI</span>
         </div>
       </header>
 

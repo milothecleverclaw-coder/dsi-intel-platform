@@ -28,7 +28,7 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "DSI Intelligence Platform",
+        title: "ประจักษ์ AI",
       },
       {
         name: "description",

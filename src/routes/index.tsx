@@ -8,7 +8,7 @@ function HomePage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-16">
       <div className="w-full max-w-3xl space-y-6 text-center">
-        <h1 className="text-4xl font-bold text-foreground">DSI Intelligence Platform</h1>
+        <h1 className="text-4xl font-bold text-foreground">ประจักษ์ AI</h1>
         <p className="text-lg text-muted-foreground">Department of Special Investigation</p>
         <p className="mx-auto max-w-xl text-muted-foreground">
           AI-powered case management, report generation, and intelligence analysis.
