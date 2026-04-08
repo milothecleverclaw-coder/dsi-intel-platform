@@ -42,12 +42,12 @@ function HomePage() {
       </div>
 
       <div className="mt-12">
-        <a
-          href="/login"
+        <Link
+          to="/app"
           className="inline-block rounded-lg bg-primary px-6 py-2 text-primary-foreground transition-colors hover:bg-primary/80"
         >
-          Log in
-        </a>
+          Go to App
+        </Link>
       </div>
     </div>
   );

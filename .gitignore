@@ -21,4 +21,5 @@ dist
 /server/build
 /public/build
 
-.tanstack
+.tanstackdata/
+data/*.db

@@ -1,75 +1,1033 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type FormEvent,
+  type KeyboardEvent,
+  type ChangeEvent,
+  type MouseEvent,
+} from "react";
+import { Plus, Trash2, PanelLeftClose, PanelLeft, ChevronDown, ChevronRight, BookOpen, Upload, FileText, FileSpreadsheet } from "lucide-react";
+import Markdown from "react-markdown";
 
 export const Route = createFileRoute("/app/chat")({
   component: ChatPage,
 });
 
 const RAGFLOW_BASE = "https://ragflow.hotserver.uk";
-const SHARE_AUTH = "u0knS-A4qxPRorjfKqEL6KDe6ccz-2ah";
+const RAGFLOW_API = `${RAGFLOW_BASE}/api/v1`;
+const RAGFLOW_TOKEN = "ragflow-OlzPV-jhtT7tQ6SVTtsXHIuxhIWwqVQ1F6dzHXh7yQk";
+const DSI_AGENT_ID = "491d5e9832aa11f195dfeffdd1714b4e";
+const USER_ID = "4e804422250811f19e73b999782d6f14";
 
-const AGENTS = [
-  {
-    key: "general",
-    label: "General Chat",
-    sharedId: "0c91ccfc2f4e11f1868a91828498d495",
-  },
-  {
-    key: "case-assistant",
-    label: "Case Assistant",
-    sharedId: "2cc1a3fc253111f1868a91828498d495",
-  },
-  {
-    key: "specific-case",
-    label: "Specific Case",
-    sharedId: "2cc1a3fc253111f1868a91828498d495",
-  },
-] as const;
+interface Session {
+  id: string;
+  title: string;
+  created_at?: string;
+}
 
-function AgentIframe({ sharedId }: { sharedId: string }) {
+interface Chunk {
+  id: string;
+  content: string;
+  document_id: string;
+  document_name: string;
+  dataset_id: string;
+  similarity: number;
+  doc_type: string;
+}
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+// References stored separately, keyed by message index key
+type RefsMap = Record<string, Record<string, Chunk>>;
+
+const SESSION_NAMES_KEY = "dsi-session-names";
+const SESSION_REFS_KEY = "dsi-session-refs";
+
+function stripCitationTags(text: string): string {
+  return text.replace(/\[ID:\d+\]/g, "");
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "");
+}
+
+function truncate(str: string, max: number): string {
+  const clean = stripHtml(str);
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max) + "...";
+}
+
+/** Parse [ID:xxx] patterns and build a mapping of id -> sequential index */
+function parseCitations(text: string): { idMap: Record<string, number>; ids: string[] } {
+  const idMap: Record<string, number> = {};
+  const ids: string[] = [];
+  const re = /\[ID:(\d+)\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const id = m[1];
+    if (!(id in idMap)) {
+      idMap[id] = ids.length + 1;
+      ids.push(id);
+    }
+  }
+  return { idMap, ids };
+}
+
+/** Replace [ID:xxx] with superscript badge JSX — returns array of React nodes */
+function renderCitedText(
+  text: string,
+  idMap: Record<string, number>,
+  onCiteClick: (badgeNum: number, anchorEl: HTMLSpanElement) => void,
+) {
+  if (!Object.keys(idMap).length) return <Markdown>{text}</Markdown>;
+
+  const parts = text.split(/(\[ID:\d+\])/);
+  const nodes: React.ReactNode[] = [];
+  let inMd = false;
+  let mdBuf = "";
+
+  for (const part of parts) {
+    const m = part.match(/^\[ID:(\d+)\]$/);
+    if (m) {
+      // Flush markdown buffer
+      if (mdBuf) {
+        nodes.push(<Markdown key={`md-${nodes.length}`}>{mdBuf}</Markdown>);
+        mdBuf = "";
+      }
+      const num = idMap[m[1]];
+      if (num !== undefined) {
+        nodes.push(
+          <sup
+            key={`cite-${m[1]}`}
+            className="inline-flex items-center justify-center ml-0.5 cursor-pointer rounded bg-blue-100 px-1 py-0 text-[10px] font-semibold leading-none text-blue-700 hover:bg-blue-200 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              const el = e.currentTarget as HTMLSpanElement;
+              onCiteClick(num, el);
+            }}
+          >
+            {num}
+          </sup>,
+        );
+      }
+    } else {
+      mdBuf += part;
+    }
+  }
+  if (mdBuf) {
+    nodes.push(<Markdown key={`md-last`}>{mdBuf}</Markdown>);
+  }
+  return nodes;
+}
+
+function loadSessionNames(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_NAMES_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveSessionName(id: string, name: string) {
+  const names = loadSessionNames();
+  names[id] = name;
+  localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(names));
+}
+
+function removeSessionName(id: string) {
+  const names = loadSessionNames();
+  delete names[id];
+  localStorage.setItem(SESSION_NAMES_KEY, JSON.stringify(names));
+}
+
+function loadSessionRefs(): Record<string, Record<string, Chunk>> {
+  try {
+    return JSON.parse(localStorage.getItem(SESSION_REFS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveSessionRefs(sessionId: string, refs: Record<string, Chunk>) {
+  const all = loadSessionRefs();
+  all[sessionId] = { ...(all[sessionId] || {}), ...refs };
+  localStorage.setItem(SESSION_REFS_KEY, JSON.stringify(all));
+}
+
+function removeSessionRefs(sessionId: string) {
+  const all = loadSessionRefs();
+  delete all[sessionId];
+  localStorage.setItem(SESSION_REFS_KEY, JSON.stringify(all));
+}
+
+function getSessionTitle(session: Session): string {
+  const names = loadSessionNames();
+  if (names[session.id]) return names[session.id];
+  if (session.title) return session.title;
+  return session.id.slice(0, 8) + "...";
+}
+
+async function fetchSessions(): Promise<{ sessions: Session[]; messagesMap: Record<string, Message[]> }> {
+  try {
+    const res = await fetch(
+      `${RAGFLOW_API}/agents/${DSI_AGENT_ID}/sessions?page=1&page_size=50&user_id=${USER_ID}`,
+      { headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` } }
+    );
+    const data = await res.json();
+    if (data.code === 0 && Array.isArray(data.data)) {
+      const msgsMap: Record<string, Message[]> = {};
+      const sessions = data.data.map((s: Record<string, unknown>) => {
+        const id = s.id as string;
+        const rawMsgs = (s.messages as Message[] | undefined) || [];
+        const filtered = rawMsgs.filter((m, i) => {
+          if (i === 0 && m.role === "assistant" && /hi!?\s*i'?m\s+(your\s+)?assistant/i.test(m.content)) {
+            return false;
+          }
+          return true;
+        });
+        msgsMap[id] = filtered.map((m) =>
+          m.role === "assistant" ? { ...m, content: stripCitationTags(m.content) } : m
+        );
+        return {
+          id,
+          title: (s.name as string) || "",
+          created_at: s.created_at as string | undefined,
+        };
+      });
+      return { sessions, messagesMap: msgsMap };
+    }
+  } catch {
+    // ignore
+  }
+  return { sessions: [], messagesMap: {} };
+}
+
+async function createSession(): Promise<Session | null> {
+  try {
+    const res = await fetch(`${RAGFLOW_API}/agents/${DSI_AGENT_ID}/sessions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ user_id: USER_ID }),
+    });
+    const data = await res.json();
+    if (data.code === 0 && data.data?.id) {
+      return { id: data.data.id, title: "" };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function deleteSession(sessionId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${RAGFLOW_API}/agents/${DSI_AGENT_ID}/sessions`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ids: [sessionId] }),
+    });
+    const data = await res.json();
+    return data.code === 0;
+  } catch {
+    return false;
+  }
+}
+
+function CitationTooltip({
+  chunk,
+  anchorRect,
+  onClose,
+}: {
+  chunk: Chunk;
+  anchorRect: DOMRect;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const justOpened = useRef(true);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => { justOpened.current = false; });
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (justOpened.current) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleClick as unknown as EventListener);
+    return () => document.removeEventListener("mousedown", handleClick as unknown as EventListener);
+  }, [onClose]);
+
+  const style: React.CSSProperties = {
+    position: "fixed",
+    zIndex: 50,
+    maxWidth: 350,
+    minWidth: 220,
+  };
+
+  // Position below or above the anchor
+  const spaceBelow = window.innerHeight - anchorRect.bottom;
+  if (spaceBelow > 250) {
+    style.top = anchorRect.bottom + 6;
+    style.left = Math.min(anchorRect.left, window.innerWidth - 360);
+  } else {
+    style.bottom = window.innerHeight - anchorRect.top + 6;
+    style.left = Math.min(anchorRect.left, window.innerWidth - 360);
+  }
+
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <iframe
-        src={`${RAGFLOW_BASE}/agent/share?shared_id=${sharedId}&from=agent&auth=${SHARE_AUTH}&theme=light`}
-        className="h-full w-full border-0"
-        allow="microphone"
-        title="RAGFlow Agent"
-      />
-      <div className="pointer-events-none absolute top-0 left-0 h-12 w-full bg-white" />
+    <div
+      ref={ref}
+      className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg text-sm"
+      style={style}
+    >
+      <p className="font-semibold text-gray-800 text-xs mb-1 break-all">{chunk.document_name}</p>
+      <p className="text-xs text-blue-600 mb-1">
+        ความคล้าย: {Math.round(chunk.similarity * 100)}%
+      </p>
+      <p className="text-xs text-gray-600 leading-relaxed">
+        {truncate(chunk.content, 200)}
+      </p>
+    </div>
+  );
+}
+
+function ReferencePanel({
+  chunks,
+  idMap,
+  onRequestTooltip,
+}: {
+  chunks: Record<string, Chunk>;
+  idMap: Record<string, number>;
+  onRequestTooltip: (badgeNum: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ids = Object.keys(idMap);
+
+  if (!ids.length) return null;
+
+  return (
+    <div className="mt-2 rounded-md bg-gray-50 px-2 py-1">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <BookOpen className="h-3 w-3" />
+        <span>แหล่งอ้างอิง ({ids.length})</span>
+      </button>
+      {open && (
+        <ol className="mt-1 ml-4 list-decimal space-y-0.5">
+          {ids.map((id) => {
+            const chunk = chunks[id];
+            if (!chunk) return null;
+            return (
+              <li
+                key={id}
+                className="text-xs text-gray-600 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => onRequestTooltip(idMap[id])}
+              >
+                <span className="font-medium">{chunk.document_name}</span>
+                <span className="ml-1 text-gray-400">({Math.round(chunk.similarity * 100)}%)</span>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function SessionList({
+  sessions,
+  activeSessionId,
+  onSelect,
+  onNew,
+  onDelete,
+}: {
+  sessions: Session[];
+  activeSessionId: string | null;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card">
+      <div className="flex items-center justify-between px-3 py-3">
+        <span className="text-sm font-semibold">แชท</span>
+        <button
+          onClick={onNew}
+          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          title="แชทใหม่"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {sessions.length === 0 && (
+          <p className="px-3 py-4 text-xs text-muted-foreground">ยังไม่มีแชท</p>
+        )}
+        {sessions.map((s) => (
+          <div
+            key={s.id}
+            className={`group relative flex items-center gap-2 px-3 py-2 text-sm cursor-pointer transition-colors ${
+              s.id === activeSessionId
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+            onClick={() => onSelect(s.id)}
+          >
+            <span className="truncate flex-1">
+              {getSessionTitle(s)}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("ต้องการลบแชทนี้ใช่หรือไม่?")) onDelete(s.id);
+              }}
+              className="shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity"
+              title="ลบ"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const DATASET_ID = "bfc919a4252311f1868a91828498d495";
+
+interface Doc {
+  name: string;
+  status: number;
+  progress: number;
+  chunk_count: number;
+  size: number;
+  create_time: string;
+  id?: string;
+}
+
+function fileIcon(name: string) {
+  const s = name.toLowerCase().split(".").pop();
+  if (s === "pdf") return "📄";
+  if (s === "md") return "📝";
+  if (s === "docx" || s === "doc") return "📃";
+  if (s === "csv") return "📊";
+  if (s === "txt") return "📝";
+  return "📎";
+}
+
+function statusBadge(status: number) {
+  if (status === 1) return <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">✅ เสร็จสิ้น</span>;
+  if (status === 2) return <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">⏳ กำลังดำเนินการ</span>;
+  if (status === 6) return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">❌ ผิดพลาด</span>;
+  return <span className="text-xs text-gray-500">สถานะ {status}</span>;
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / 1048576).toFixed(1) + " MB";
+}
+
+function formatDate(ts: string) {
+  try {
+    return new Date(ts).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
+  } catch {
+    return ts;
+  }
+}
+
+function CasesTab() {
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchDocs = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${RAGFLOW_API}/datasets/${DATASET_ID}/documents?page=1&page_size=50`,
+        { headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` } },
+      );
+      const data = await res.json();
+      if (data.code === 0) {
+        setDocs(data.data.docs || []);
+        setTotal(data.data.total || 0);
+      }
+    } catch {
+      // ignore
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchDocs();
+  }, [fetchDocs]);
+
+  // Auto-refresh when docs are parsing
+  useEffect(() => {
+    const hasParsing = docs.some((d) => d.status === 2);
+    if (!hasParsing) return;
+    const id = setInterval(fetchDocs, 5000);
+    return () => clearInterval(id);
+  }, [docs, fetchDocs]);
+
+  async function handleUpload(files: FileList | null) {
+    if (!files || !files.length) return;
+    setUploading(true);
+    for (const file of Array.from(files)) {
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        await fetch(`${RAGFLOW_API}/datasets/${DATASET_ID}/documents/upload_and_parse`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
+          body: form,
+        });
+      } catch {
+        // ignore
+      }
+    }
+    setUploading(false);
+    fetchDocs();
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-3 py-4 md:px-4">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">📁 ไฟล์ — DSI Case Files v2</h2>
+            <p className="text-sm text-gray-500 mt-0.5">{total} เอกสาร</p>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            {uploading ? "กำลังอัปโหลด..." : "อัปโหลดเอกสาร"}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.md,.docx,.txt,.csv"
+            multiple
+            className="hidden"
+            onChange={(e) => handleUpload(e.target.files)}
+          />
+        </div>
+
+        {/* Document list */}
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg border border-gray-200 bg-white p-3 animate-pulse">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-1">
+                    <div className="h-5 w-5 rounded bg-gray-200" />
+                    <div className="h-4 w-48 rounded bg-gray-200" />
+                  </div>
+                  <div className="h-5 w-16 rounded-full bg-gray-200" />
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="h-3 w-20 rounded bg-gray-200" />
+                  <div className="h-3 w-14 rounded bg-gray-200" />
+                  <div className="h-3 w-24 rounded bg-gray-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : docs.length === 0 ? (
+          <p className="text-sm text-gray-400 py-8 text-center">ยังไม่มีเอกสาร</p>
+        ) : (
+          <div className="space-y-2">
+            {docs.map((doc, i) => (
+              <div key={doc.id || i} className="rounded-lg border border-gray-200 bg-white p-3 hover:shadow-sm transition-shadow">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg shrink-0">{fileIcon(doc.name)}</span>
+                    <span className="text-sm font-medium text-gray-900 truncate">{doc.name}</span>
+                  </div>
+                  {statusBadge(doc.status)}
+                </div>
+                {doc.status === 2 && (
+                  <div className="mt-2 h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-yellow-500 transition-all duration-500" style={{ width: `${Math.round(doc.progress * 100)}%` }} />
+                  </div>
+                )}
+                <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-500">
+                  {doc.chunk_count != null && <span>{doc.chunk_count} chunks</span>}
+                  <span>{formatSize(doc.size)}</span>
+                  <span>{formatDate(doc.create_time)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DSIAgentChat() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [messagesMap, setMessagesMap] = useState<Record<string, Message[]>>({});
+  const [refsMap, setRefsMap] = useState<RefsMap>({});
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showSessionList, setShowSessionList] = useState(false);
+  const [initLoading, setInitLoading] = useState(true);
+
+  // Tooltip state
+  const [tooltip, setTooltip] = useState<{
+    chunk: Chunk;
+    rect: DOMRect;
+  } | null>(null);
+
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const messages = activeSessionId ? messagesMap[activeSessionId] || [] : [];
+
+  const loadSessions = useCallback(async () => {
+    const { sessions: s, messagesMap: m } = await fetchSessions();
+    setSessions(s);
+    setMessagesMap(m);
+    setRefsMap(loadSessionRefs());
+    setInitLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  function autoResize(e: ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 80) + "px";
+  }
+
+  async function handleNewSession() {
+    const session = await createSession();
+    if (session) {
+      setSessions((prev) => [session, ...prev]);
+      setActiveSessionId(session.id);
+      setMessagesMap((prev) => ({ ...prev, [session.id]: [] }));
+      setRefsMap((prev) => ({ ...prev, [session.id]: {} }));
+      setInput("");
+      setShowSessionList(false);
+    }
+  }
+
+  async function handleDeleteSession(id: string) {
+    const ok = await deleteSession(id);
+    if (ok) {
+      removeSessionName(id);
+      removeSessionRefs(id);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      setMessagesMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setRefsMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (activeSessionId === id) {
+        setActiveSessionId(null);
+      }
+    }
+  }
+
+  function handleSelectSession(id: string) {
+    setActiveSessionId(id);
+    setShowSessionList(false);
+  }
+
+  /** Show tooltip for a given badge number in the current session */
+  function showTooltipForBadge(badgeNum: number) {
+    if (!activeSessionId) return;
+    const sessionRefs = refsMap[activeSessionId] || {};
+    const { idMap } = parseCitations(
+      messages.filter((m) => m.role === "assistant").map((m) => m.content).join(" "),
+    );
+    // Find the chunk ID for this badge number
+    const chunkId = Object.entries(idMap).find(([, num]) => num === badgeNum)?.[0];
+    if (!chunkId || !sessionRefs[chunkId]) return;
+    const chunk = sessionRefs[chunkId];
+
+    // Find the badge element in the DOM to position tooltip
+    const badges = document.querySelectorAll<HTMLSpanElement>("sup[role='citation']");
+    // We use a data attribute approach: find by text content
+    const allSup = document.querySelectorAll("sup");
+    let targetEl: Element | null = null;
+    for (const el of allSup) {
+      if (el.textContent?.trim() === String(badgeNum)) {
+        targetEl = el;
+        break;
+      }
+    }
+    if (targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      setTooltip({ chunk, rect });
+    }
+  }
+
+  async function handleSend(e: FormEvent) {
+    e.preventDefault();
+    const question = input.trim();
+    if (!question || loading || !activeSessionId) return;
+
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    const isFirst = !(messagesMap[activeSessionId] || []).length;
+    if (isFirst) {
+      const title = question.slice(0, 30) + (question.length > 30 ? "..." : "");
+      saveSessionName(activeSessionId, title);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId && !s.title
+            ? { ...s, title }
+            : s
+        )
+      );
+    }
+
+    const userMsg: Message = { role: "user", content: question };
+    const placeholderMsg: Message = { role: "assistant", content: "" };
+
+    setMessagesMap((prev) => ({
+      ...prev,
+      [activeSessionId]: [...(prev[activeSessionId] || []), userMsg, placeholderMsg],
+    }));
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${RAGFLOW_API}/agents/${DSI_AGENT_ID}/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RAGFLOW_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          session_id: activeSessionId,
+          question,
+          stream: true,
+        }),
+      });
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data:")) {
+              try {
+                const json = JSON.parse(line.slice(5).trim());
+                if (json.event === "message" && json.data?.content) {
+                  accumulated += json.data.content;
+                  setMessagesMap((prev) => {
+                    const msgs = [...(prev[activeSessionId] || [])];
+                    msgs[msgs.length - 1] = {
+                      role: "assistant",
+                      content: accumulated,
+                    };
+                    return { ...prev, [activeSessionId]: msgs };
+                  });
+                }
+                if (json.event === "message_end" && json.data?.reference?.chunks) {
+                  const refChunks = json.data.reference.chunks as Record<string, Chunk>;
+                  setRefsMap((prev) => ({
+                    ...prev,
+                    [activeSessionId]: {
+                      ...(prev[activeSessionId] || {}),
+                      ...refChunks,
+                    },
+                  }));
+                  saveSessionRefs(activeSessionId, refChunks);
+                }
+              } catch {
+                // skip
+              }
+            }
+          }
+        }
+      }
+
+      // Strip [ID:xxx] tags from the final stored text
+      const cleaned = stripCitationTags(accumulated);
+      if (cleaned !== accumulated) {
+        setMessagesMap((prev) => {
+          const msgs = [...(prev[activeSessionId] || [])];
+          msgs[msgs.length - 1] = { role: "assistant", content: cleaned };
+          return { ...prev, [activeSessionId]: msgs };
+        });
+      }
+    } catch {
+      setMessagesMap((prev) => {
+        const msgs = [...(prev[activeSessionId] || [])];
+        msgs[msgs.length - 1] = {
+          role: "assistant",
+          content: "เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่",
+        };
+        return { ...prev, [activeSessionId]: msgs };
+      });
+    }
+
+    setLoading(false);
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(e as unknown as FormEvent);
+    }
+  }
+
+  return (
+    <div className="flex h-full relative">
+      {/* Desktop session list */}
+      <div className="hidden md:block">
+        <SessionList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelect={handleSelectSession}
+          onNew={handleNewSession}
+          onDelete={handleDeleteSession}
+        />
+      </div>
+
+      {/* Mobile session list overlay */}
+      {showSessionList && (
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={() => setShowSessionList(false)}
+          />
+          <div className="fixed left-0 top-0 z-40 h-full md:hidden animate-in slide-in-from-left duration-200">
+            <SessionList
+              sessions={sessions}
+              activeSessionId={activeSessionId}
+              onSelect={handleSelectSession}
+              onNew={handleNewSession}
+              onDelete={handleDeleteSession}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Chat area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Mobile header with toggle */}
+        <div className="flex items-center gap-2 px-3 py-2 md:hidden border-b border-border">
+          <button
+            onClick={() => setShowSessionList(true)}
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+          <span className="text-sm font-medium truncate">
+            {activeSessionId
+              ? (sessions.find((s) => s.id === activeSessionId) ? getSessionTitle(sessions.find((s) => s.id === activeSessionId)!) : "แชท")
+              : "แชท"}
+          </span>
+        </div>
+
+        {/* Desktop new chat button */}
+        <div className="hidden md:flex items-center justify-end px-3 py-2">
+          <button
+            onClick={handleNewSession}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            แชทใหม่
+          </button>
+        </div>
+
+        {/* Messages or welcome */}
+        {initLoading ? (
+          <div className="flex flex-1 items-center justify-center">
+            <p className="text-sm text-muted-foreground">กำลังโหลด...</p>
+          </div>
+        ) : !activeSessionId ? (
+          <div className="flex flex-1 items-center justify-center py-20">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm mb-3">เลือกแชทหรือสร้างแชทใหม่</p>
+              <button
+                onClick={handleNewSession}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                แชทใหม่
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto px-3 pb-2 md:px-4">
+              <div className="mx-auto max-w-3xl space-y-4">
+                {messages.length === 0 && (
+                  <div className="flex h-full items-center justify-center py-20 text-gray-400">
+                    <p className="text-sm">สวัสดี ถามอะไรก็ได้เกี่ยวกับคดี</p>
+                  </div>
+                )}
+                {messages.map((msg, i) => {
+                  const isAssistant = msg.role === "assistant";
+                  const sessionRefs = activeSessionId ? (refsMap[activeSessionId] || {}) : {};
+                  const { idMap } = parseCitations(msg.content);
+                  const hasCitations = Object.keys(idMap).length > 0 && Object.keys(sessionRefs).length > 0;
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex ${isAssistant ? "justify-start" : "justify-end"}`}
+                    >
+                      <div
+                        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm md:max-w-[70%] ${
+                          msg.role === "user"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        {isAssistant ? (
+                          <div className="prose prose-sm max-w-none">
+                            {hasCitations
+                              ? renderCitedText(msg.content, idMap, (badgeNum, el) => {
+                                  const chunkId = Object.entries(idMap).find(([, n]) => n === badgeNum)?.[0];
+                                  if (!chunkId || !sessionRefs[chunkId]) return;
+                                  setTooltip({ chunk: sessionRefs[chunkId], rect: el.getBoundingClientRect() });
+                                })
+                              : <Markdown>{msg.content}</Markdown>}
+                            {hasCitations && (
+                              <ReferencePanel
+                                chunks={sessionRefs}
+                                idMap={idMap}
+                                onRequestTooltip={showTooltipForBadge}
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={bottomRef} />
+              </div>
+            </div>
+
+            {/* Tooltip */}
+            {tooltip && (
+              <CitationTooltip
+                chunk={tooltip.chunk}
+                anchorRect={tooltip.rect}
+                onClose={() => setTooltip(null)}
+              />
+            )}
+
+            {/* Input */}
+            <div
+              className="shrink-0 border-t border-gray-200 px-3 py-3 md:px-4"
+              style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+            >
+              <form onSubmit={handleSend} className="mx-auto flex max-w-3xl gap-2">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={autoResize}
+                  onKeyDown={handleKeyDown}
+                  placeholder="พิมพ์ข้อความ..."
+                  className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  rows={1}
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !input.trim()}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {loading ? "..." : "ส่ง"}
+                </button>
+              </form>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
 function ChatPage() {
+  const [activeTab, setActiveTab] = useState<"chat" | "cases">("chat");
+
   return (
     <div className="flex h-full flex-col bg-white">
-      <div className="border-b border-gray-200 px-8 py-5">
-        <h1 className="text-xl font-semibold text-gray-900">AI Chat</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Interact with case data using natural language queries
-        </p>
+      {/* Tab bar */}
+      <div className="flex items-center gap-1 border-b border-border px-3 pt-2 shrink-0">
+        <button
+          onClick={() => setActiveTab("chat")}
+          className={`rounded-t-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "chat"
+              ? "bg-gray-100 text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+          }`}
+        >
+          💬 สนทนา
+        </button>
+        <button
+          onClick={() => setActiveTab("cases")}
+          className={`rounded-t-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "cases"
+              ? "bg-gray-100 text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+          }`}
+        >
+          📁 ไฟล์
+        </button>
       </div>
-
-      <div className="flex flex-1 overflow-hidden p-4">
-        <Tabs defaultValue="general" className="flex h-full w-full flex-col">
-          <TabsList>
-            {AGENTS.map((a) => (
-              <TabsTrigger key={a.key} value={a.key}>
-                {a.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {AGENTS.map((a) => (
-            <TabsContent
-              key={a.key}
-              value={a.key}
-              className="mt-4 flex-1 overflow-hidden rounded-lg border border-gray-200"
-            >
-              <AgentIframe sharedId={a.sharedId} />
-            </TabsContent>
-          ))}
-        </Tabs>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {activeTab === "chat" ? <DSIAgentChat /> : <CasesTab />}
       </div>
     </div>
   );

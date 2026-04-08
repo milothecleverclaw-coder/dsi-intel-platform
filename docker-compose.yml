@@ -1,14 +1,15 @@
 services:
-  db:
-    image: postgres:alpine
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
     ports:
-      - 5432:5432
-    volumes:
-      - postgres_data_tanstarter:/var/lib/postgresql/data
+      - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=tanstarter
+      POSTGRES_USER: dsi
+      POSTGRES_PASSWORD: dsi_secret_2024
+      POSTGRES_DB: dsi_intel
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  postgres_data_tanstarter:
+  pgdata:
