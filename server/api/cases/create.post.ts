@@ -8,79 +8,299 @@ import { cases } from "@/lib/db/schema";
 const RAGFLOW_API = "https://ragflow.hotserver.uk/api/v1";
 const RAGFLOW_TOKEN = "ragflow-OlzPV-jhtT7tQ6SVTtsXHIuxhIWwqVQ1F6dzHXh7yQk";
 const USER_ID = "4e804422250811f19e73b999782d6f14";
-const GROQ_LLM = "llama-3.3-70b-versatile@Groq";
 
-const SYSTEM_PROMPT = `คุณคือผู้ช่วยด้านข่าวกรองของ DSI (กรมสอบสวนคดีพิเศษ) สำหรับคดี "{{CASE_NAME}}"
+function randomId() {
+  return Math.random().toString(36).substring(2, 10);
+}
+
+function buildCanvasDSL(caseName: string, datasetId: string) {
+  const AGENT_ID = `Agent:${randomId()}`;
+  const MESSAGE_ID = `Message:${randomId()}`;
+  const TOOL_ID = `Tool:${randomId()}`;
+
+  const agentSysPrompt = `คุณเป็นผู้ช่วย AI ของ DSI (สำนักงานสอบสวนคดีพิเศษ) ชื่อ "DSI Smart Assistant"
 
 <role>
-คุณช่วยเจ้าหน้าที่ DSI ในการวิเคราะห์เอกสารและข้อมูลคดี ตอบคำถามอย่างเป็นระบบ อ้างอิงจากเอกสารจริง
+คุณช่วยเหลือเจ้าหน้าที่ DSI ในการค้นหาและสรุปข้อมูลจากฐานข้อมูลคดี "${caseName}" รวมถึงตอบคำถามทั่วไป
 </role>
 
+<visualization>
+- เมื่อผู้ใช้ขอให้แสดงข้อมูลเป็นแผนภูมิ ไดอะแกรม ความสัมพันธ์ หรือโครงสร้าง → สร้างไดอะแกรมโดยใช้อักขระวาดกล่องเท่านั้น
+- ใช้เครื่องหมาย: ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼ │ ─ ↓
+- อย่าใช้ Mermaid หรือลูกศรแบบ →
+- ใส่ใน code block พร้อมระบุภาษาว่า text
+</visualization>
+
+<format>
+- ขึ้นบรรทัดใหม่แต่ละย่อหน้า ต้องขึ้นบรรทัดว่าง 1 บรรทัด (กด Enter 2 ครั้ง)
+- ใช้รายการ (- หรือ 1.) เพื่อแสดงข้อมูลหลายจุด
+- อย่าเขียนทุกอย่างในบรรทัดเดียวยาวๆ
+</format>
+
 <tool_usage>
-- ใช้เครื่องมือ Retrieval เมื่อคำถามเกี่ยวกับเอกสาร ข้อมูล หรือรายละเอียดคดีเท่านั้น
-- สำหรับคำถามทั่วไป ตอบเลยโดยไม่ต้องใช้เครื่องมือ
+- เรียกใช้เครื่องมือ Retrieval เฉพาะเมื่อคำถามเกี่ยวข้องกับ: คดี, เอกสาร, พยาน, หลักฐาน, ข้อมูลคดี, รายชื่อ, วันที่ของคดี, หมายเลขคดี หรือข้อมูลเฉพาะเรื่องที่อาจมีในฐานข้อมูล
+- อย่าเรียก Retrieval สำหรับ: การทักทาย, สนทนาทั่วไป, คำถามเกี่ยวกับหน้าที่ของคุณ, หรือคำถามที่ไม่ต้องการข้อมูลจากเอกสาร
+- หาก Retrieval ไม่พบข้อมูลที่เกี่ยวข้อย ให้ตอบตรงๆ ว่าไม่พบข้อมูลในฐานข้อมูล
 </tool_usage>
 
 <rules>
-- ตอบเป็นภาษาไทยเสมอ
-- อ้างอิงเอกสารด้วย [ID:xxx] เมื่อมีข้อมูลจาก Retrieval
-- อย่าแต่งเรื่องที่ไม่มีในเอกสาร
+- ตอบเป็นภาษาไทยเสมอ เว้นแต่ผู้ใช้ถามเป็นภาษาอังกฤษ
+- อ้างอิงข้อมูลจากเอกสารในฐานข้อมูลเท่านั้น อย่าสร้างข้อมูลหรือสมมติขึ้นมาเอง
+- ใช้รูปแบบ [ID:x] เพื่ออ้างอิงแหล่งข้อมูลเมื่อมีการอ้างถึง
+- สรุปคำตอบให้กระชับ เข้าใจง่าย และเน้นข้อมูลที่สำคัญ
+- หากผู้ใช้ถามหลายคำถาม ให้ตอบทีละข้ออย่างเป็นระเบียบ
 </rules>`;
 
-function buildCanvasDSL(caseName: string, datasetId: string) {
   return {
     title: caseName,
     canvas_category: "Agent",
     dsl: {
-      components: {
-        begin: {
-          obj: {
-            componentType: "Begin",
+      graph: {
+        nodes: [
+          {
             data: {
-              prologue: `สวัสดี! ฉันผู้ช่วยสำหรับคดี "${caseName}" ถามอะไรก็ได้เกี่ยวกับเอกสารในคดีนี้`,
+              form: { mode: "conversational", prologue: `สวัสดี! ฉันผู้ช่วยสำหรับคดี "${caseName}"` },
+              label: "Begin",
+              name: "begin",
             },
+            id: "begin",
+            measured: { height: 82, width: 200 },
+            position: { x: 50, y: 200 },
+            selected: false,
+            sourcePosition: "left",
+            targetPosition: "right",
+            type: "beginNode",
           },
-        },
-        agent: {
-          obj: {
-            componentType: "Agent",
+          {
             data: {
-              maxRounds: 3,
-              strategy: "react",
-              model: { llmId: GROQ_LLM, enableToolCall: true },
-              prompt: {
-                system: SYSTEM_PROMPT.replace("{{CASE_NAME}}", caseName),
+              form: {
+                cite: true,
+                delay_after_error: 1,
+                description: "",
+                exception_default_value: "",
+                exception_goto: [],
+                exception_method: "",
+                frequencyPenaltyEnabled: true,
+                frequency_penalty: 0.5,
+                llm_id: "llama-3.3-70b-versatile@Groq",
+                maxTokensEnabled: false,
+                max_retries: 3,
+                max_rounds: 1,
+                max_tokens: 4096,
+                mcp: [],
+                message_history_window_size: 12,
+                outputs: { content: { type: "string", value: "" } },
+                parameter: "Precise",
+                presencePenaltyEnabled: true,
+                presence_penalty: 0.5,
+                prompts: [{ content: "{sys.query}", role: "user" }],
+                showStructuredOutput: false,
+                sys_prompt: agentSysPrompt,
+                temperature: 0.2,
+                temperatureEnabled: true,
                 tools: [
                   {
-                    componentType: "Retrieval",
+                    component_name: "Retrieval",
+                    name: "Retrieval",
                     params: {
-                      datasetIds: [datasetId],
-                      topN: 3,
-                      topK: 30,
-                      similarityThreshold: 0.5,
-                      keywordsWeight: 0.7,
+                      cross_languages: [],
+                      description: "",
+                      empty_response: "",
+                      kb_ids: [datasetId],
+                      keywords_similarity_weight: 0.7,
+                      meta_data_filter: {},
+                      outputs: {
+                        formalized_content: { type: "string", value: "" },
+                        json: { type: "Array<Object>", value: [] },
+                      },
+                      rerank_id: "",
+                      retrieval_from: "dataset",
+                      similarity_threshold: 0.1,
+                      toc_enhance: true,
+                      top_k: 1024,
+                      top_n: 10,
+                      use_kg: false,
                     },
                   },
                 ],
+                topPEnabled: true,
+                top_p: 0.75,
+                user_prompt: "",
+                visual_files_var: "",
               },
-              cite: true,
+              label: "Agent",
+              name: "Agent_0",
             },
+            id: AGENT_ID,
+            measured: { height: 90, width: 200 },
+            position: { x: 361.4048833094207, y: 238.3401302421477 },
+            selected: false,
+            sourcePosition: "right",
+            targetPosition: "left",
+            type: "agentNode",
           },
-          downstream: ["reply"],
-          upstream: ["begin"],
-        },
-        reply: {
-          obj: { componentType: "Message", data: { content: "" } },
-          upstream: ["agent"],
-        },
-      },
-      graph: {
+          {
+            data: {
+              form: { content: [`{${AGENT_ID}@content}\n`] },
+              label: "Message",
+              name: "Message_0",
+            },
+            dragging: false,
+            id: MESSAGE_ID,
+            measured: { height: 86, width: 200 },
+            position: { x: 736.7706821995397, y: 307.3221403641306 },
+            selected: false,
+            sourcePosition: "right",
+            targetPosition: "left",
+            type: "messageNode",
+            width: 200,
+          },
+          {
+            data: {
+              form: {
+                description: "This is an agent for a specific task.",
+                user_prompt: "This is the order you need to send to the agent.",
+              },
+              label: "Tool",
+              name: "flow.tool_0",
+            },
+            dragging: false,
+            id: TOOL_ID,
+            measured: { height: 50, width: 200 },
+            position: { x: 327.41201875523393, y: 469.2696580234296 },
+            selected: false,
+            sourcePosition: "right",
+            targetPosition: "left",
+            type: "toolNode",
+            width: 200,
+          },
+        ],
         edges: [
-          { id: "begin-agent", source: "begin", target: "agent" },
-          { id: "agent-reply", source: "agent", target: "reply" },
+          {
+            data: { isHovered: false },
+            id: `xy-edge__beginstart-${AGENT_ID}end`,
+            source: "begin",
+            sourceHandle: "start",
+            target: AGENT_ID,
+            targetHandle: "end",
+          },
+          {
+            data: { isHovered: false },
+            id: `xy-edge__${AGENT_ID}start-${MESSAGE_ID}end`,
+            source: AGENT_ID,
+            sourceHandle: "start",
+            target: MESSAGE_ID,
+            targetHandle: "end",
+          },
+          {
+            data: { isHovered: false },
+            id: `xy-edge__${AGENT_ID}tool-${TOOL_ID}end`,
+            source: AGENT_ID,
+            sourceHandle: "tool",
+            target: TOOL_ID,
+            targetHandle: "end",
+          },
         ],
       },
+      globals: {
+        "sys.conversation_turns": 0,
+        "sys.files": [],
+        "sys.history": [],
+        "sys.query": "",
+        "sys.user_id": "",
+      },
+      components: {
+        begin: {
+          downstream: [AGENT_ID],
+          upstream: [],
+          obj: {
+            component_name: "Begin",
+            params: {
+              enablePrologue: true,
+              inputs: {},
+              outputs: {},
+              prologue: `สวัสดี! ฉันผู้ช่วยสำหรับคดี "${caseName}"`,
+              mode: "conversational",
+            },
+          },
+        },
+        [AGENT_ID]: {
+          downstream: [MESSAGE_ID],
+          upstream: ["begin"],
+          obj: {
+            component_name: "Agent",
+            params: {
+              cite: true,
+              delay_after_error: 1,
+              description: "",
+              exception_comment: "",
+              exception_default_value: "",
+              exception_goto: [],
+              exception_method: null,
+              frequencyPenaltyEnabled: true,
+              frequency_penalty: 0.5,
+              llm_id: "llama-3.3-70b-versatile@Groq",
+              maxTokensEnabled: false,
+              max_retries: 3,
+              max_rounds: 1,
+              max_tokens: 4096,
+              mcp: [],
+              message_history_window_size: 12,
+              outputs: { content: { type: "string", value: "" } },
+              parameter: "Precise",
+              presencePenaltyEnabled: true,
+              presence_penalty: 0.5,
+              prompts: [{ content: "{sys.query}", role: "user" }],
+              showStructuredOutput: false,
+              sys_prompt: agentSysPrompt,
+              temperature: 0.2,
+              temperatureEnabled: true,
+              tools: [
+                {
+                  component_name: "Retrieval",
+                  name: "Retrieval",
+                  params: {
+                    kb_ids: [datasetId],
+                    cross_languages: [],
+                    description: "",
+                    empty_response: "",
+                    keywords_similarity_weight: 0.7,
+                    meta_data_filter: {},
+                    outputs: {
+                      formalized_content: { type: "string", value: "" },
+                      json: { type: "Array<Object>", value: [] },
+                    },
+                    rerank_id: "",
+                    retrieval_from: "dataset",
+                    similarity_threshold: 0.1,
+                    toc_enhance: true,
+                    top_k: 1024,
+                    top_n: 10,
+                    use_kg: false,
+                  },
+                },
+              ],
+              topPEnabled: true,
+              top_p: 0.75,
+              user_prompt: "",
+              visual_files_var: "",
+            },
+          },
+        },
+        [MESSAGE_ID]: {
+          downstream: [],
+          upstream: [AGENT_ID],
+          obj: {
+            component_name: "Message",
+            params: { content: [`{${AGENT_ID}@content}\n`] },
+          },
+        },
+      },
       history: [],
+      messages: [],
+      path: [],
+      retrieval: [],
+      variables: [],
     },
   };
 }
