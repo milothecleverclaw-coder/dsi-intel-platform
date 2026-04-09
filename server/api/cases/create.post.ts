@@ -25,10 +25,18 @@ function buildCanvasDSL(caseName: string, datasetId: string) {
 </role>
 
 <visualization>
-- เมื่อผู้ใช้ขอให้แสดงข้อมูลเป็นแผนภูมิ ไดอะแกรม ความสัมพันธ์ หรือโครงสร้าง → สร้างไดอะแกรมโดยใช้อักขระวาดกล่องเท่านั้น
-- ใช้เครื่องหมาย: ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼ │ ─ ↓
-- อย่าใช้ Mermaid หรือลูกศรแบบ →
-- ใส่ใน code block พร้อมระบุภาษาว่า text
+- เมื่อผู้ใช้ขอให้แสดงข้อมูลเป็นแผนภูมิ ไดอะแกรม ความสัมพันธ์ หรือโครงสร้าง → สร้างไดอะแกรมโดยใช้ Mermaid
+- ใช้ \`\`\`mermaid code block เสมอ และต้องปิด code block ด้วย \`\`\` เสมอ
+- ตัวอย่างประเภทที่รองรับ: graph TD, sequenceDiagram, flowchart LR, classDiagram, erDiagram, gantt, timeline, mindmap, pie
+- เลือกประเภท diagram ให้เหมาะกับข้อมูล เช่น ใช้ flowchart สำหรับขั้นตอน, erDiagram สำหรับความสัมพันธ์, timeline สำหรับเหตุการณ์ตามลำดับเวลา
+- อย่าใช้อักขระวาดกล่อง (┌ ┐ └ ┘) ใช้ Mermaid เท่านั้น
+- กฎสำคัญ: เขียน mermaid code เสร็จแล้ว ต้องปิดด้วย \`\`\` ทันที ก่อนที่จะเขียนคำอธิบายเพิ่มเติม อย่าเขียนคำอธิบายภายใน code block
+- ตัวอย่างที่ถูกต้อง:
+\`\`\`mermaid
+graph TD
+    A[เริ่มต้น] --> B[สิ้นสุด]
+\`\`\`
+คำอธิบายของแผนภูมิอยู่นอก code block แบบนี้
 </visualization>
 
 <format>
@@ -311,6 +319,25 @@ export default defineEventHandler(async (event) => {
   if (!caseName) return { error: "Name is required" };
 
   try {
+    // Pre-clean duplicates: RAGFlow's soft-delete marks resources as "deleted" but they still
+    // appear in list queries. Creating a new resource with the same name returns success (code=0,
+    // data=true) but subsequent title-based lookups grab the stale/deleted resource's ID instead
+    // of the newly created one. We avoid this by explicitly deleting any pre-existing resources
+    // with the same name before creating new ones.
+
+    // Check for existing dataset and delete it
+    const existingDatasets = await fetch(`${RAGFLOW_API}/datasets?page=1&page_size=100`, {
+      headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
+    });
+    const dsList = await existingDatasets.json();
+    const existingDs = dsList.data?.find((d: any) => d.name === caseName);
+    if (existingDs) {
+      await fetch(`${RAGFLOW_API}/datasets/${existingDs.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
+      });
+    }
+
     // Create dataset
     const dsRes = await fetch(`${RAGFLOW_API}/datasets`, {
       method: "POST",
@@ -323,6 +350,19 @@ export default defineEventHandler(async (event) => {
     const dsData = await dsRes.json();
     if (dsData.code !== 0) return { error: "Failed to create dataset: " + dsData.message };
     const datasetId = dsData.data.id;
+
+    // Pre-clean any existing agent with the same title (see comment above)
+    const existingAgents = await fetch(`${RAGFLOW_API}/agents?page=1&page_size=100`, {
+      headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
+    });
+    const agentList = await existingAgents.json();
+    const existingAgent = agentList.data?.find((a: any) => a.title === caseName);
+    if (existingAgent) {
+      await fetch(`${RAGFLOW_API}/agents/${existingAgent.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${RAGFLOW_TOKEN}` },
+      });
+    }
 
     // Create agent via /api/v1/agents
     const canvasDSL = buildCanvasDSL(caseName, datasetId);
