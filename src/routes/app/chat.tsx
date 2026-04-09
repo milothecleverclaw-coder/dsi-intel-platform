@@ -12,7 +12,11 @@ import {
   FileText,
   Info,
   MessageSquare,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from "lucide-react";
+import mermaid from "mermaid";
 import {
   useState,
   useRef,
@@ -24,6 +28,230 @@ import {
   type MouseEvent,
 } from "react";
 import Markdown from "react-markdown";
+
+let mermaidCounter = 0;
+
+// ── Mermaid Modal ─────────────────────────────────────────────────
+
+function MermaidModal({ svg, onClose }: { svg: string; onClose: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+
+  // Calculate initial scale to fit SVG within 80% of viewport, then reset zoom/pan on open
+  useEffect(() => {
+    const svgEl = containerRef.current?.querySelector("svg");
+    if (svgEl) {
+      const vb = svgEl.getAttribute("viewBox");
+      if (vb) {
+        const parts = vb.split(" ").map(Number);
+        const svgWidth = parts[2];
+        const svgHeight = parts[3];
+        const scaleX = (window.innerWidth * 0.8) / svgWidth;
+        const scaleY = (window.innerHeight * 0.8) / svgHeight;
+        const newScale = Math.min(scaleX, scaleY, 2);
+        setScale(newScale);
+        setTranslate({ x: 0, y: 0 });
+        return;
+      }
+    }
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+  }, []);
+
+  // Escape key closes
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  function zoomIn() {
+    setScale((s) => Math.min(s + 0.3, 5));
+  }
+
+  function zoomOut() {
+    setScale((s) => Math.max(s - 0.3, 0.2));
+  }
+
+  function resetZoom() {
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+  }
+
+  function handleWheel(e: React.WheelEvent) {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setScale((s) => Math.min(Math.max(s + delta, 0.2), 5));
+  }
+
+  function handleMouseDown(e: React.MouseEvent) {
+    isDragging.current = true;
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      tx: translate.x,
+      ty: translate.y,
+    };
+  }
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (!isDragging.current) return;
+    setTranslate({
+      x: dragStart.current.tx + (e.clientX - dragStart.current.x),
+      y: dragStart.current.ty + (e.clientY - dragStart.current.y),
+    });
+  }
+
+  function handleMouseUp() {
+    isDragging.current = false;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-white shadow-2xl"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Floating toolbar */}
+      <div className="fixed top-4 right-4 z-10 flex items-center gap-1 rounded-full bg-gray-900/80 px-3 py-2 shadow-lg backdrop-blur-sm">
+        <button
+          onClick={zoomIn}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+          title="Zoom in"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </button>
+        <button
+          onClick={zoomOut}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+          title="Zoom out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </button>
+        <button
+          onClick={resetZoom}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+          title="Reset (fit)"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* SVG canvas */}
+      <div
+        ref={containerRef}
+        className="max-h-full max-w-full cursor-grab active:cursor-grabbing"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <div
+          dangerouslySetInnerHTML={{ __html: svg }}
+          style={{
+            transform: `scale(${scale}) translate(${translate.x / scale}px, ${translate.y / scale}px)`,
+            transformOrigin: "center center",
+            transition: isDragging.current ? "none" : "transform 0.1s ease-out",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Mermaid Renderer ──────────────────────────────────────────────
+
+function MermaidRenderer({ code }: { code: string }) {
+  const [svg, setSvg] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = `mermaid-${Date.now()}-${++mermaidCounter}`;
+    mermaid
+      .render(id, code.trim())
+      .then(({ svg: s }) => {
+        if (!cancelled) {
+          // Detect error SVGs from mermaid 11.x — check for the specific error text
+          // that only appears when parsing fails (never in valid diagrams)
+          if (s.includes("Syntax error in text") || s.includes("mermaid version")) {
+            setError(true);
+            setSvg(null);
+          } else {
+            setSvg(s);
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+
+  if (error) {
+    return null;
+  }
+
+  if (!svg) {
+    return (
+      <div className="flex items-center justify-center rounded-lg bg-white p-6 text-xs text-gray-400">
+        กำลังแสดงแผนภูมิ…
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className="my-2 flex cursor-pointer justify-center overflow-x-auto rounded-lg bg-white p-4 transition-shadow hover:shadow-md"
+        onClick={() => setModalOpen(true)}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+      {modalOpen && <MermaidModal svg={svg} onClose={() => setModalOpen(false)} />}
+    </>
+  );
+}
+
+const markdownComponents = {
+  code(
+    props: React.HTMLAttributes<HTMLElement> & { className?: string; children?: React.ReactNode },
+  ) {
+    const { className, children, ...rest } = props;
+    if (className === "language-mermaid") {
+      const code = String(children).replace(/\n$/, "");
+      return <MermaidRenderer code={code} />;
+    }
+    return (
+      <code className={className} {...rest}>
+        {children}
+      </code>
+    );
+  },
+  pre(props: React.HTMLAttributes<HTMLElement>) {
+    const { children, ...rest } = props;
+    // If child is a mermaid block, render without the <pre> wrapper
+    const child = Array.isArray(children) ? children[0] : children;
+    if (
+      child &&
+      typeof child === "object" &&
+      "props" in child &&
+      (child.props as { className?: string })?.className === "language-mermaid"
+    ) {
+      return <>{children}</>;
+    }
+    return <pre {...rest}>{children}</pre>;
+  },
+};
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,7 +347,8 @@ function renderCitedText(
   idMap: Record<string, number>,
   onCiteClick: (badgeNum: number, anchorEl: HTMLSpanElement) => void,
 ) {
-  if (!Object.keys(idMap).length) return <Markdown>{text}</Markdown>;
+  if (!Object.keys(idMap).length)
+    return <Markdown components={markdownComponents}>{text}</Markdown>;
 
   const parts = text.split(/(\[ID:\d+\]?\s*)/);
   const nodes: React.ReactNode[] = [];
@@ -129,7 +358,11 @@ function renderCitedText(
     const m = part.match(/^\[ID:(\d+)\]?\s*$/);
     if (m) {
       if (mdBuf) {
-        nodes.push(<Markdown key={`md-${nodes.length}`}>{mdBuf}</Markdown>);
+        nodes.push(
+          <Markdown key={`md-${nodes.length}`} components={markdownComponents}>
+            {mdBuf}
+          </Markdown>,
+        );
         mdBuf = "";
       }
       const num = idMap[m[1]];
@@ -153,7 +386,11 @@ function renderCitedText(
     }
   }
   if (mdBuf) {
-    nodes.push(<Markdown key={`md-last`}>{mdBuf}</Markdown>);
+    nodes.push(
+      <Markdown key={`md-last`} components={markdownComponents}>
+        {mdBuf}
+      </Markdown>,
+    );
   }
   return nodes;
 }
@@ -1093,6 +1330,7 @@ function ChatPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const activeAgentId = activeCase?.agentId || DSI_AGENT_ID;
   const activeDatasetId = activeCase?.datasetId || "";
@@ -1149,6 +1387,26 @@ function ChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Cycle typing message every 1.5s while loading
+  useEffect(() => {
+    if (loading) {
+      typingIntervalRef.current = setInterval(() => {
+        setTypingMsg(typingMessages[Math.floor(Math.random() * typingMessages.length)]);
+      }, 1500);
+    } else {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
+      }
+    };
+  }, [loading]);
 
   function autoResize(e: ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
@@ -1513,10 +1771,19 @@ function ChatPage() {
                             {isAssistant ? (
                               <div className="prose prose-sm max-w-none">
                                 {!msg.content.trim() && loading ? (
-                                  <span className="flex items-center gap-1 text-gray-400">
-                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400" />
-                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" />
-                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-gray-200 [animation-delay:300ms]" />
+                                  <span className="flex items-center gap-0.5 text-gray-400">
+                                    <span
+                                      className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                                      style={{ animationDelay: "0ms", animationDuration: "0.6s" }}
+                                    />
+                                    <span
+                                      className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                                      style={{ animationDelay: "120ms", animationDuration: "0.6s" }}
+                                    />
+                                    <span
+                                      className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"
+                                      style={{ animationDelay: "240ms", animationDuration: "0.6s" }}
+                                    />
                                     <span className="ml-1">{typingMsg}</span>
                                   </span>
                                 ) : hasCitations ? (
@@ -1531,7 +1798,7 @@ function ChatPage() {
                                     });
                                   })
                                 ) : (
-                                  <Markdown>{msg.content}</Markdown>
+                                  <Markdown components={markdownComponents}>{msg.content}</Markdown>
                                 )}
                                 {hasCitations && (
                                   <ReferencePanel
